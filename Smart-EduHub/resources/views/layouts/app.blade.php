@@ -107,13 +107,28 @@
 </head>
 <body class="text-on-surface min-h-screen">
 @php
-    $authUser   = auth()->user();
-    $isAdmin    = $authUser->isAdmin();
-    $isGuru     = $authUser->isGuru();
-    $isFinance  = $authUser->isFinanceStaff();
-    $isWali     = $authUser->isWaliKelas();
-    $isWakasis  = $authUser->isWakasis();
-    $isBK       = $authUser->isBK();
+    // User aman: kalau belum login, pakai model kosong supaya tidak 500
+    $authUser = auth()->user() ?? new \App\Models\User();
+
+    // Pemanggil method aman: false jika method tidak ada di model User
+    $can = fn($m) => method_exists($authUser, $m) && (bool) $authUser->$m();
+
+    // Helper route aman: tidak 500 jika route/parameter salah, error tetap dicatat di laravel.log
+    $rt = function ($name, $params = []) {
+        try {
+            return \Illuminate\Support\Facades\Route::has($name) ? route($name, $params) : '#';
+        } catch (\Throwable $e) {
+            report($e);
+            return '#';
+        }
+    };
+
+    $isAdmin    = $can('isAdmin');
+    $isGuru     = $can('isGuru');
+    $isFinance  = $can('isFinanceStaff');
+    $isWali     = $can('isWaliKelas');
+    $isWakasis  = $can('isWakasis');
+    $isBK       = $can('isBK');
     $showOps    = $isAdmin || (!$isFinance && !$isGuru);
     $viewYear   = $currentViewYear ?? null;
     $years      = $globalAcademicYears ?? [];
@@ -131,15 +146,15 @@
     $financeItems = [];
     if ($isFinance) {
         $financeItems = array_values(array_filter([
-            ['ok' => $authUser->canAccessFinanceDashboard(),     'route' => 'admin.finance.dashboard',            'match' => ['admin.finance.dashboard'],            'icon' => 'monitoring',               'label' => 'Dashboard Keuangan',  'short' => 'Dashboard',   'tint' => 'bg-emerald-100 text-emerald-600'],
-            ['ok' => $authUser->canManageFinanceRequests(),      'route' => 'admin.finance.requests',             'match' => ['admin.finance.requests*'],            'icon' => 'mark_email_read',          'label' => 'Pengajuan Kartu',     'short' => 'Pengajuan',   'tint' => 'bg-orange-100 text-orange-600'],
-            ['ok' => $authUser->canProcessFinancePayment(),      'route' => 'admin.finance.fast-payment',         'match' => ['admin.finance.fast-payment'],         'icon' => 'speed',                    'label' => 'Pembayaran Parkir',    'short' => 'Parkir Cepat', 'tint' => 'bg-red-100 text-red-600'],
-            ['ok' => $authUser->canTopupFinance(),                'route' => 'admin.finance.fast-transaction',     'match' => ['admin.finance.fast-transaction*'],    'icon' => 'bolt',                    'label' => 'Transaksi Cepat',      'short' => 'Cepat',       'tint' => 'bg-orange-100 text-orange-600'],
-            ['ok' => $authUser->canViewFinanceCards(),           'route' => 'admin.finance.cards',                'match' => ['admin.finance.cards*'],               'icon' => 'credit_card',              'label' => 'Transaksi Kartu',     'short' => 'Kartu',       'tint' => 'bg-orange-100 text-orange-600'],
-            ['ok' => $authUser->canViewFinancePaymentHistory(),  'route' => 'admin.finance.payments.history',     'match' => ['admin.finance.payments.history'],     'icon' => 'receipt_long',             'label' => 'Riwayat Pembayaran',  'short' => 'Riwayat',     'tint' => 'bg-amber-100 text-amber-600'],
-            ['ok' => $authUser->canManageFinanceTransactions(),  'route' => 'admin.finance.transactions.index',  'match' => ['admin.finance.transactions*'],        'icon' => 'account_balance_wallet',   'label' => 'Kelola Transaksi',    'short' => 'Transaksi',   'tint' => 'bg-orange-100 text-orange-600'],
-            ['ok' => $authUser->canViewFinanceTransactionHistory(), 'route' => 'admin.finance.transaction-history.index', 'match' => ['admin.finance.transaction-history*'], 'icon' => 'history', 'label' => 'Riwayat Perubahan', 'short' => 'Audit', 'tint' => 'bg-violet-100 text-violet-600'],
-            ['ok' => $authUser->canAccessFinanceRekap(),         'route' => 'admin.finance.rekap',                'match' => ['admin.finance.rekap'],                'icon' => 'bar_chart',                'label' => 'Rekap Keuangan',      'short' => 'Rekap',       'tint' => 'bg-violet-100 text-violet-600'],
+            ['ok' => $can('canAccessFinanceDashboard'),          'route' => 'admin.finance.dashboard',            'match' => ['admin.finance.dashboard'],            'icon' => 'monitoring',               'label' => 'Dashboard Keuangan',  'short' => 'Dashboard',   'tint' => 'bg-emerald-100 text-emerald-600'],
+            ['ok' => $can('canManageFinanceRequests'),           'route' => 'admin.finance.requests',             'match' => ['admin.finance.requests*'],            'icon' => 'mark_email_read',          'label' => 'Pengajuan Kartu',     'short' => 'Pengajuan',   'tint' => 'bg-orange-100 text-orange-600'],
+            ['ok' => $can('canProcessFinancePayment'),           'route' => 'admin.finance.fast-payment',         'match' => ['admin.finance.fast-payment'],         'icon' => 'speed',                    'label' => 'Pembayaran Parkir',    'short' => 'Parkir Cepat', 'tint' => 'bg-red-100 text-red-600'],
+            ['ok' => $can('canTopupFinance'),                    'route' => 'admin.finance.fast-transaction',     'match' => ['admin.finance.fast-transaction*'],    'icon' => 'bolt',                     'label' => 'Transaksi Cepat',      'short' => 'Cepat',       'tint' => 'bg-orange-100 text-orange-600'],
+            ['ok' => $can('canViewFinanceCards'),                'route' => 'admin.finance.cards',                'match' => ['admin.finance.cards*'],               'icon' => 'credit_card',              'label' => 'Transaksi Kartu',     'short' => 'Kartu',       'tint' => 'bg-orange-100 text-orange-600'],
+            ['ok' => $can('canViewFinancePaymentHistory'),       'route' => 'admin.finance.payments.history',     'match' => ['admin.finance.payments.history'],     'icon' => 'receipt_long',             'label' => 'Riwayat Pembayaran',  'short' => 'Riwayat',     'tint' => 'bg-amber-100 text-amber-600'],
+            ['ok' => $can('canManageFinanceTransactions'),       'route' => 'admin.finance.transactions.index',   'match' => ['admin.finance.transactions*'],        'icon' => 'account_balance_wallet',   'label' => 'Kelola Transaksi',    'short' => 'Transaksi',   'tint' => 'bg-orange-100 text-orange-600'],
+            ['ok' => $can('canViewFinanceTransactionHistory'),   'route' => 'admin.finance.transaction-history.index', 'match' => ['admin.finance.transaction-history*'], 'icon' => 'history', 'label' => 'Riwayat Perubahan', 'short' => 'Audit', 'tint' => 'bg-violet-100 text-violet-600'],
+            ['ok' => $can('canAccessFinanceRekap'),              'route' => 'admin.finance.rekap',                'match' => ['admin.finance.rekap'],                'icon' => 'bar_chart',                'label' => 'Rekap Keuangan',      'short' => 'Rekap',       'tint' => 'bg-violet-100 text-violet-600'],
         ], fn($i) => $i['ok']));
     }
 @endphp
@@ -157,17 +172,17 @@
 
         <nav class="flex-1 space-y-1 overflow-y-auto pr-1 custom-scrollbar" aria-label="Menu utama">
             @if(!$isGuru)
-                <a class="{{ $navCls(request()->routeIs('dashboard')) }}" href="{{ route('dashboard') }}">
+                <a class="{{ $navCls(request()->routeIs('dashboard')) }}" href="{{ $rt('dashboard') }}">
                     <span class="material-symbols-outlined">dashboard</span><span>{{ __('Dashboard') }}</span>
                 </a>
             @else
-                <a class="{{ $navCls(request()->routeIs('guru.dashboard')) }}" href="{{ route('guru.dashboard') }}">
+                <a class="{{ $navCls(request()->routeIs('guru.dashboard')) }}" href="{{ $rt('guru.dashboard') }}">
                     <span class="material-symbols-outlined">school</span><span>Dashboard Guru</span>
                 </a>
-                <a class="{{ $navCls(request()->routeIs('admin.courses*') && !request()->routeIs('admin.courses.all-rekap', 'admin.courses.rekap-nilai*')) }}" href="{{ route('admin.courses.index') }}">
+                <a class="{{ $navCls(request()->routeIs('admin.courses*') && !request()->routeIs('admin.courses.all-rekap', 'admin.courses.rekap-nilai*')) }}" href="{{ $rt('admin.courses.index') }}">
                     <span class="material-symbols-outlined">auto_stories</span><span>Kursus &amp; Modul</span>
                 </a>
-                <a class="{{ $navCls(request()->routeIs('admin.courses.all-rekap', 'admin.courses.rekap-nilai*')) }}" href="{{ route('admin.courses.all-rekap') }}">
+                <a class="{{ $navCls(request()->routeIs('admin.courses.all-rekap', 'admin.courses.rekap-nilai*')) }}" href="{{ $rt('admin.courses.all-rekap') }}">
                     <span class="material-symbols-outlined">grading</span><span>Penilaian</span>
                 </a>
             @endif
@@ -180,7 +195,7 @@
                 </button>
                 <div x-show="open" x-cloak x-collapse class="ml-3 pl-2 border-l border-slate-100 space-y-1">
                     @foreach($financeItems as $fi)
-                        <a class="{{ $navCls(request()->routeIs(...$fi['match'])) }}" href="{{ route($fi['route']) }}">
+                        <a class="{{ $navCls(request()->routeIs(...$fi['match'])) }}" href="{{ $rt($fi['route']) }}">
                             <span class="material-symbols-outlined text-[20px]">{{ $fi['icon'] }}</span><span>{{ $fi['label'] }}</span>
                         </a>
                     @endforeach
@@ -189,7 +204,7 @@
             @endif
 
             @if($isAdmin)
-                <a class="{{ $navCls(request()->routeIs('admin.notifications*')) }}" href="{{ route('admin.notifications.index') }}">
+                <a class="{{ $navCls(request()->routeIs('admin.notifications*')) }}" href="{{ $rt('admin.notifications.index') }}">
                     <span class="material-symbols-outlined">notifications</span><span>Notifikasi</span>
                 </a>
 
@@ -199,12 +214,12 @@
                         <span class="material-symbols-outlined transition-transform duration-200" :class="open ? 'rotate-180' : ''">expand_more</span>
                     </button>
                     <div x-show="open" x-cloak x-collapse class="ml-3 pl-2 border-l border-slate-100 space-y-1">
-                        <a class="{{ $navCls(request()->routeIs('students*')) }}" href="{{ route('students') }}"><span class="material-symbols-outlined text-[20px]">group</span><span>Data Siswa</span></a>
-                        <a class="{{ $navCls(request()->routeIs('management-users*')) }}" href="{{ route('management-users.index') }}"><span class="material-symbols-outlined text-[20px]">manage_accounts</span><span>Manajemen User</span></a>
-                        <a class="{{ $navCls(request()->routeIs('parents*')) }}" href="{{ route('parents.index') }}"><span class="material-symbols-outlined text-[20px]">family_restroom</span><span>Data Orang Tua</span></a>
-                        <a class="{{ $navCls(request()->routeIs('angkatans*')) }}" href="{{ route('angkatans.index') }}"><span class="material-symbols-outlined text-[20px]">sort</span><span>Data Angkatan</span></a>
-                        <a class="{{ $navCls(request()->routeIs('registrations*')) }}" href="{{ route('registrations') }}"><span class="material-symbols-outlined text-[20px]">how_to_reg</span><span>Pendaftaran</span></a>
-                        <a class="{{ $navCls(request()->routeIs('admin.courses*')) }}" href="{{ route('admin.courses.index') }}"><span class="material-symbols-outlined text-[20px]">auto_stories</span><span>Kursus &amp; Modul</span></a>
+                        <a class="{{ $navCls(request()->routeIs('students*')) }}" href="{{ $rt('students') }}"><span class="material-symbols-outlined text-[20px]">group</span><span>Data Siswa</span></a>
+                        <a class="{{ $navCls(request()->routeIs('management-users*')) }}" href="{{ $rt('management-users.index') }}"><span class="material-symbols-outlined text-[20px]">manage_accounts</span><span>Manajemen User</span></a>
+                        <a class="{{ $navCls(request()->routeIs('parents*')) }}" href="{{ $rt('parents.index') }}"><span class="material-symbols-outlined text-[20px]">family_restroom</span><span>Data Orang Tua</span></a>
+                        <a class="{{ $navCls(request()->routeIs('angkatans*')) }}" href="{{ $rt('angkatans.index') }}"><span class="material-symbols-outlined text-[20px]">sort</span><span>Data Angkatan</span></a>
+                        <a class="{{ $navCls(request()->routeIs('registrations*')) }}" href="{{ $rt('registrations') }}"><span class="material-symbols-outlined text-[20px]">how_to_reg</span><span>Pendaftaran</span></a>
+                        <a class="{{ $navCls(request()->routeIs('admin.courses*')) }}" href="{{ $rt('admin.courses.index') }}"><span class="material-symbols-outlined text-[20px]">auto_stories</span><span>Kursus &amp; Modul</span></a>
                     </div>
                 </div>
             @endif
@@ -216,24 +231,24 @@
                     <span class="material-symbols-outlined transition-transform duration-200" :class="open ? 'rotate-180' : ''">expand_more</span>
                 </button>
                 <div x-show="open" x-cloak x-collapse class="ml-3 pl-2 border-l border-slate-100 space-y-1">
-                    {{-- Raport Industri & Surat Resmi dinonaktifkan (pakai komentar Blade agar route() tidak dievaluasi) --}}
+                    {{-- Raport Industri & Surat Resmi dinonaktifkan --}}
 
                     @if($isAdmin)
-                        <a class="{{ $navCls(request()->routeIs('attendance')) }}" href="{{ route('attendance') }}"><span class="material-symbols-outlined text-[20px]">event_available</span><span>{{ __('Attendance') }}</span></a>
+                        <a class="{{ $navCls(request()->routeIs('attendance')) }}" href="{{ $rt('attendance') }}"><span class="material-symbols-outlined text-[20px]">event_available</span><span>{{ __('Attendance') }}</span></a>
                     @endif
                     @if($isAdmin || $isWali)
-                        <a class="{{ $navCls(request()->routeIs('attendance.report')) }}" href="{{ route('attendance.report') }}"><span class="material-symbols-outlined text-[20px]">analytics</span><span>Laporan Presensi</span></a>
+                        <a class="{{ $navCls(request()->routeIs('attendance.report')) }}" href="{{ $rt('attendance.report') }}"><span class="material-symbols-outlined text-[20px]">analytics</span><span>Laporan Presensi</span></a>
                     @endif
                     @if($isAdmin || $isWali || $isWakasis || $isBK)
-                        <a class="{{ $navCls(request()->routeIs('points')) }}" href="{{ route('points') }}"><span class="material-symbols-outlined text-[20px]">military_tech</span><span>{{ __('Merit & Discipline') }}</span></a>
+                        <a class="{{ $navCls(request()->routeIs('points')) }}" href="{{ $rt('points') }}"><span class="material-symbols-outlined text-[20px]">military_tech</span><span>{{ __('Merit & Discipline') }}</span></a>
                     @endif
                     @if($isAdmin)
-                        <a class="{{ $navCls(request()->routeIs('admin.exams.index')) }}" href="{{ route('admin.exams.index') }}"><span class="material-symbols-outlined text-[20px]">quiz</span><span>Manajemen Ujian</span></a>
-                        <a class="{{ $navCls(request()->routeIs('admin.exams.results')) }}" href="{{ route('admin.exams.results') }}"><span class="material-symbols-outlined text-[20px]">grade</span><span>Manajemen Nilai</span></a>
-                        <a class="{{ $navCls(request()->routeIs('admin.permits*')) }}" href="{{ route('admin.permits.index') }}"><span class="material-symbols-outlined text-[20px]">assignment_late</span><span>Izin &amp; Sakit</span></a>
-                        <a class="{{ $navCls(request()->routeIs('holidays*')) }}" href="{{ route('holidays') }}"><span class="material-symbols-outlined text-[20px]">event_busy</span><span>Hari Libur</span></a>
-                        <a class="{{ $navCls(request()->routeIs('point-rules*')) }}" href="{{ route('point-rules.index') }}"><span class="material-symbols-outlined text-[20px]">rule</span><span>Peraturan Poin</span></a>
-                        <a class="{{ $navCls(request()->routeIs('admin.complaints*')) }}" href="{{ route('admin.complaints.index') }}"><span class="material-symbols-outlined text-[20px]">report</span><span>Aduan &amp; Laporan</span></a>
+                        <a class="{{ $navCls(request()->routeIs('admin.exams.index')) }}" href="{{ $rt('admin.exams.index') }}"><span class="material-symbols-outlined text-[20px]">quiz</span><span>Manajemen Ujian</span></a>
+                        <a class="{{ $navCls(request()->routeIs('admin.exams.results')) }}" href="{{ $rt('admin.exams.results') }}"><span class="material-symbols-outlined text-[20px]">grade</span><span>Manajemen Nilai</span></a>
+                        <a class="{{ $navCls(request()->routeIs('admin.permits*')) }}" href="{{ $rt('admin.permits.index') }}"><span class="material-symbols-outlined text-[20px]">assignment_late</span><span>Izin &amp; Sakit</span></a>
+                        <a class="{{ $navCls(request()->routeIs('holidays*')) }}" href="{{ $rt('holidays') }}"><span class="material-symbols-outlined text-[20px]">event_busy</span><span>Hari Libur</span></a>
+                        <a class="{{ $navCls(request()->routeIs('point-rules*')) }}" href="{{ $rt('point-rules.index') }}"><span class="material-symbols-outlined text-[20px]">rule</span><span>Peraturan Poin</span></a>
+                        <a class="{{ $navCls(request()->routeIs('admin.complaints*')) }}" href="{{ $rt('admin.complaints.index') }}"><span class="material-symbols-outlined text-[20px]">report</span><span>Aduan &amp; Laporan</span></a>
                     @endif
                 </div>
             </div>
@@ -242,9 +257,9 @@
 
         <div class="pt-4 mt-2 border-t border-slate-100 space-y-1">
             @if($isAdmin)
-                <a class="{{ $navCls(request()->routeIs('settings*')) }}" href="{{ route('settings') }}"><span class="material-symbols-outlined">settings</span><span>{{ __('Settings') }}</span></a>
+                <a class="{{ $navCls(request()->routeIs('settings*')) }}" href="{{ $rt('settings') }}"><span class="material-symbols-outlined">settings</span><span>{{ __('Settings') }}</span></a>
             @endif
-            <form method="POST" action="{{ route('logout') }}">
+            <form method="POST" action="{{ $rt('logout') }}">
                 @csrf
                 <button type="submit" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-all">
                     <span class="material-symbols-outlined">logout</span><span>Sign Out</span>
@@ -264,7 +279,7 @@
         </div>
         <div class="flex items-center gap-2 shrink-0">
             @auth
-            <form action="{{ route('settings.set-academic-year') }}" method="POST" id="yearSwitcherForm">
+            <form action="{{ $rt('settings.set-academic-year') }}" method="POST" id="yearSwitcherForm">
                 @csrf
                 <select name="academic_year" onchange="this.form.submit()" aria-label="Tahun ajaran" class="bg-slate-100/70 border-none rounded-full py-1.5 pl-4 pr-8 text-[12px] font-bold text-slate-600 focus:ring-2 focus:ring-orange-500/30 cursor-pointer">
                     @foreach($years as $year)
@@ -276,7 +291,7 @@
             <button type="button" onclick="window.location.reload()" class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-all" title="Refresh" aria-label="Refresh">
                 <span class="material-symbols-outlined text-[22px]">refresh</span>
             </button>
-            <a href="{{ route('profile') }}" class="flex items-center gap-3 pl-2">
+            <a href="{{ $rt('profile') }}" class="flex items-center gap-3 pl-2">
                 <div class="text-right hidden xl:block">
                     <p class="text-sm font-bold text-slate-900 leading-none">{{ $userName }}</p>
                     <p class="text-[11px] text-slate-500 font-medium mt-1">{{ $roleLabel }}</p>
@@ -320,27 +335,27 @@
     <!-- ===================== BOTTOM NAV (Mobile & Tablet) ===================== -->
     <nav class="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-slate-100 flex justify-around items-center px-2 pt-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.06)]" aria-label="Navigasi bawah">
         @if($isGuru)
-            <a href="{{ route('guru.dashboard') }}" class="{{ $botCls(request()->routeIs('guru.dashboard')) }}">
+            <a href="{{ $rt('guru.dashboard') }}" class="{{ $botCls(request()->routeIs('guru.dashboard')) }}">
                 <span class="material-symbols-outlined text-[24px]">school</span><span class="text-[10px] font-bold">Home</span>
             </a>
-            <a href="{{ route('admin.courses.index') }}" class="{{ $botCls(request()->routeIs('admin.courses*') && !request()->routeIs('admin.courses.all-rekap', 'admin.courses.rekap-nilai*')) }}">
+            <a href="{{ $rt('admin.courses.index') }}" class="{{ $botCls(request()->routeIs('admin.courses*') && !request()->routeIs('admin.courses.all-rekap', 'admin.courses.rekap-nilai*')) }}">
                 <span class="material-symbols-outlined text-[24px]">auto_stories</span><span class="text-[10px] font-bold">Kursus</span>
             </a>
         @elseif($isFinance && !$isAdmin)
-            <a href="{{ route('admin.finance.dashboard') }}" class="{{ $botCls(request()->routeIs('admin.finance.dashboard')) }}">
+            <a href="{{ $rt('admin.finance.dashboard') }}" class="{{ $botCls(request()->routeIs('admin.finance.dashboard')) }}">
                 <span class="material-symbols-outlined text-[24px]">monitoring</span><span class="text-[10px] font-bold">Dashboard</span>
             </a>
-            <a href="{{ route('admin.finance.fast-payment') }}" class="{{ $botCls(request()->routeIs('admin.finance.fast-payment')) }}">
+            <a href="{{ $rt('admin.finance.fast-payment') }}" class="{{ $botCls(request()->routeIs('admin.finance.fast-payment')) }}">
                 <span class="material-symbols-outlined text-[24px]">speed</span><span class="text-[10px] font-bold">Bayar</span>
             </a>
-            <a href="{{ route('admin.finance.fast-transaction') }}" class="{{ $botCls(request()->routeIs('admin.finance.fast-transaction*')) }}">
+            <a href="{{ $rt('admin.finance.fast-transaction') }}" class="{{ $botCls(request()->routeIs('admin.finance.fast-transaction*')) }}">
                 <span class="material-symbols-outlined text-[24px]">bolt</span><span class="text-[10px] font-bold">Cepat</span>
             </a>
         @else
-            <a href="{{ route('dashboard') }}" class="{{ $botCls(request()->routeIs('dashboard')) }}">
+            <a href="{{ $rt('dashboard') }}" class="{{ $botCls(request()->routeIs('dashboard')) }}">
                 <span class="material-symbols-outlined text-[24px]">dashboard</span><span class="text-[10px] font-bold">Home</span>
             </a>
-            <a href="{{ route('points') }}" class="{{ $botCls(request()->routeIs('points*')) }}">
+            <a href="{{ $rt('points') }}" class="{{ $botCls(request()->routeIs('points*')) }}">
                 <span class="material-symbols-outlined text-[24px]">military_tech</span><span class="text-[10px] font-bold">Poin</span>
             </a>
         @endif
@@ -354,20 +369,20 @@
         </button>
 
         @if($isGuru)
-            <a href="{{ route('admin.courses.all-rekap') }}" class="{{ $botCls(request()->routeIs('admin.courses.all-rekap','admin.courses.rekap-nilai*')) }}">
+            <a href="{{ $rt('admin.courses.all-rekap') }}" class="{{ $botCls(request()->routeIs('admin.courses.all-rekap','admin.courses.rekap-nilai*')) }}">
                 <span class="material-symbols-outlined text-[24px]">grading</span><span class="text-[10px] font-bold">Nilai</span>
             </a>
         @elseif($isFinance && !$isAdmin)
-            <a href="{{ route('admin.finance.cards') }}" class="{{ $botCls(request()->routeIs('admin.finance.cards*')) }}">
+            <a href="{{ $rt('admin.finance.cards') }}" class="{{ $botCls(request()->routeIs('admin.finance.cards*')) }}">
                 <span class="material-symbols-outlined text-[24px]">credit_card</span><span class="text-[10px] font-bold">Kartu</span>
             </a>
         @else
-            <a href="{{ route('attendance') }}" class="{{ $botCls(request()->routeIs('attendance*')) }}">
+            <a href="{{ $rt('attendance') }}" class="{{ $botCls(request()->routeIs('attendance*')) }}">
                 <span class="material-symbols-outlined text-[24px]">fingerprint</span><span class="text-[10px] font-bold">Presensi</span>
             </a>
         @endif
 
-        <a href="{{ route('profile') }}" class="{{ $botCls(request()->routeIs('profile*')) }}">
+        <a href="{{ $rt('profile') }}" class="{{ $botCls(request()->routeIs('profile*')) }}">
             <span class="material-symbols-outlined text-[24px]">person</span><span class="text-[10px] font-bold">Profil</span>
         </a>
     </nav>
@@ -397,7 +412,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 @foreach($financeItems as $fi)
                     @php $on = request()->routeIs(...$fi['match']); @endphp
-                    <a href="{{ route($fi['route']) }}" class="flex flex-col items-center gap-3 p-4 rounded-2xl border transition-colors {{ $on ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100' }}">
+                    <a href="{{ $rt($fi['route']) }}" class="flex flex-col items-center gap-3 p-4 rounded-2xl border transition-colors {{ $on ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100' }}">
                         <div class="w-12 h-12 rounded-xl flex items-center justify-center {{ $on ? 'bg-orange-100 text-orange-600' : $fi['tint'] }}">
                             <span class="material-symbols-outlined">{{ $fi['icon'] }}</span>
                         </div>
@@ -417,7 +432,7 @@
     <!-- Tombol keluar dari impersonate / quick login -->
     @if(session()->has('impersonate_admin_id') || session()->has('quick_login_from_welcome'))
         @php $fromWelcome = session()->has('quick_login_from_welcome'); @endphp
-        <form method="POST" action="{{ route('impersonate.guru.stop') }}" class="fixed bottom-24 left-5 z-[75]">
+        <form method="POST" action="{{ $rt('impersonate.guru.stop') }}" class="fixed bottom-24 left-5 z-[75]">
             @csrf
             <button type="submit"
                     onclick="return confirm('{{ $fromWelcome ? 'Keluar & kembali ke halaman utama?' : 'Kembali ke akun Administrator?' }}')"
@@ -450,7 +465,7 @@
         <div class="overflow-y-auto custom-scrollbar p-5 space-y-6 pb-28">
 
             @if(count($years))
-            <form action="{{ route('settings.set-academic-year') }}" method="POST" class="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-2xl">
+            <form action="{{ $rt('settings.set-academic-year') }}" method="POST" class="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-2xl">
                 @csrf
                 <label for="mobileYearSelect" class="flex items-center gap-2 text-sm font-bold text-slate-700">
                     <span class="material-symbols-outlined text-slate-500">calendar_month</span>Tahun ajaran
@@ -476,7 +491,7 @@
                         ['admin.courses*', 'admin.courses.index', 'auto_stories', 'Kursus'],
                     ] as [$m, $r, $ic, $lb])
                         @php $on = request()->routeIs($m); @endphp
-                        <a href="{{ route($r) }}" class="{{ $tileCls($on) }}">
+                        <a href="{{ $rt($r) }}" class="{{ $tileCls($on) }}">
                             <span class="{{ $tileIco($on) }}">{{ $ic }}</span>
                             <span class="text-[11px] font-bold text-center">{{ $lb }}</span>
                         </a>
@@ -495,7 +510,7 @@
                         ['admin.courses.all-rekap', 'admin.courses.all-rekap', 'grading', 'Penilaian'],
                     ] as [$m, $r, $ic, $lb])
                         @php $on = request()->routeIs($m); @endphp
-                        <a href="{{ route($r) }}" class="{{ $tileCls($on) }}">
+                        <a href="{{ $rt($r) }}" class="{{ $tileCls($on) }}">
                             <span class="{{ $tileIco($on) }}">{{ $ic }}</span>
                             <span class="text-[11px] font-bold text-center">{{ $lb }}</span>
                         </a>
@@ -510,7 +525,7 @@
                 <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                     @foreach($financeItems as $fi)
                         @php $on = request()->routeIs(...$fi['match']); @endphp
-                        <a href="{{ route($fi['route']) }}" class="{{ $tileCls($on) }}">
+                        <a href="{{ $rt($fi['route']) }}" class="{{ $tileCls($on) }}">
                             <span class="{{ $tileIco($on) }}">{{ $fi['icon'] }}</span>
                             <span class="text-[11px] font-bold text-center">{{ $fi['short'] }}</span>
                         </a>
@@ -524,28 +539,28 @@
                 <p class="text-xs font-extrabold text-slate-400 mb-3">Operasional</p>
                 <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                     @if($isAdmin)
-                        <a href="{{ route('attendance') }}" class="{{ $tileCls(request()->routeIs('attendance')) }}"><span class="{{ $tileIco(request()->routeIs('attendance')) }}">event_available</span><span class="text-[11px] font-bold text-center">Presensi</span></a>
+                        <a href="{{ $rt('attendance') }}" class="{{ $tileCls(request()->routeIs('attendance')) }}"><span class="{{ $tileIco(request()->routeIs('attendance')) }}">event_available</span><span class="text-[11px] font-bold text-center">Presensi</span></a>
                     @endif
                     @if($isAdmin || $isWali)
-                        <a href="{{ route('attendance.report') }}" class="{{ $tileCls(request()->routeIs('attendance.report')) }}"><span class="{{ $tileIco(request()->routeIs('attendance.report')) }}">analytics</span><span class="text-[11px] font-bold text-center">Lap. Presensi</span></a>
+                        <a href="{{ $rt('attendance.report') }}" class="{{ $tileCls(request()->routeIs('attendance.report')) }}"><span class="{{ $tileIco(request()->routeIs('attendance.report')) }}">analytics</span><span class="text-[11px] font-bold text-center">Lap. Presensi</span></a>
                     @endif
                     @if($isAdmin || $isWali || $isWakasis || $isBK)
-                        <a href="{{ route('points') }}" class="{{ $tileCls(request()->routeIs('points*')) }}"><span class="{{ $tileIco(request()->routeIs('points*')) }}">military_tech</span><span class="text-[11px] font-bold text-center">Poin</span></a>
+                        <a href="{{ $rt('points') }}" class="{{ $tileCls(request()->routeIs('points*')) }}"><span class="{{ $tileIco(request()->routeIs('points*')) }}">military_tech</span><span class="text-[11px] font-bold text-center">Poin</span></a>
                     @endif
                     @if($isAdmin)
-                        <a href="{{ route('admin.exams.index') }}" class="{{ $tileCls(request()->routeIs('admin.exams.index')) }}"><span class="{{ $tileIco(request()->routeIs('admin.exams.index')) }}">quiz</span><span class="text-[11px] font-bold text-center">Ujian</span></a>
-                        <a href="{{ route('admin.exams.results') }}" class="{{ $tileCls(request()->routeIs('admin.exams.results')) }}"><span class="{{ $tileIco(request()->routeIs('admin.exams.results')) }}">grade</span><span class="text-[11px] font-bold text-center">Nilai</span></a>
-                        <a href="{{ route('admin.permits.index') }}" class="{{ $tileCls(request()->routeIs('admin.permits*')) }}"><span class="{{ $tileIco(request()->routeIs('admin.permits*')) }}">assignment_late</span><span class="text-[11px] font-bold text-center">Izin &amp; Sakit</span></a>
-                        <a href="{{ route('holidays') }}" class="{{ $tileCls(request()->routeIs('holidays*')) }}"><span class="{{ $tileIco(request()->routeIs('holidays*')) }}">event_busy</span><span class="text-[11px] font-bold text-center">Hari Libur</span></a>
-                        <a href="{{ route('point-rules.index') }}" class="{{ $tileCls(request()->routeIs('point-rules*')) }}"><span class="{{ $tileIco(request()->routeIs('point-rules*')) }}">rule</span><span class="text-[11px] font-bold text-center">Aturan Poin</span></a>
-                        <a href="{{ route('admin.complaints.index') }}" class="{{ $tileCls(request()->routeIs('admin.complaints*')) }}"><span class="{{ $tileIco(request()->routeIs('admin.complaints*')) }}">report</span><span class="text-[11px] font-bold text-center">Aduan</span></a>
+                        <a href="{{ $rt('admin.exams.index') }}" class="{{ $tileCls(request()->routeIs('admin.exams.index')) }}"><span class="{{ $tileIco(request()->routeIs('admin.exams.index')) }}">quiz</span><span class="text-[11px] font-bold text-center">Ujian</span></a>
+                        <a href="{{ $rt('admin.exams.results') }}" class="{{ $tileCls(request()->routeIs('admin.exams.results')) }}"><span class="{{ $tileIco(request()->routeIs('admin.exams.results')) }}">grade</span><span class="text-[11px] font-bold text-center">Nilai</span></a>
+                        <a href="{{ $rt('admin.permits.index') }}" class="{{ $tileCls(request()->routeIs('admin.permits*')) }}"><span class="{{ $tileIco(request()->routeIs('admin.permits*')) }}">assignment_late</span><span class="text-[11px] font-bold text-center">Izin &amp; Sakit</span></a>
+                        <a href="{{ $rt('holidays') }}" class="{{ $tileCls(request()->routeIs('holidays*')) }}"><span class="{{ $tileIco(request()->routeIs('holidays*')) }}">event_busy</span><span class="text-[11px] font-bold text-center">Hari Libur</span></a>
+                        <a href="{{ $rt('point-rules.index') }}" class="{{ $tileCls(request()->routeIs('point-rules*')) }}"><span class="{{ $tileIco(request()->routeIs('point-rules*')) }}">rule</span><span class="text-[11px] font-bold text-center">Aturan Poin</span></a>
+                        <a href="{{ $rt('admin.complaints.index') }}" class="{{ $tileCls(request()->routeIs('admin.complaints*')) }}"><span class="{{ $tileIco(request()->routeIs('admin.complaints*')) }}">report</span><span class="text-[11px] font-bold text-center">Aduan</span></a>
                     @endif
                 </div>
             </div>
             @endif
 
             @if($isAdmin)
-            <a href="{{ route('admin.notifications.index') }}" class="flex items-center justify-between p-4 bg-slate-50 hover:bg-orange-50 rounded-2xl transition-all">
+            <a href="{{ $rt('admin.notifications.index') }}" class="flex items-center justify-between p-4 bg-slate-50 hover:bg-orange-50 rounded-2xl transition-all">
                 <span class="flex items-center gap-3"><span class="material-symbols-outlined text-slate-500">notifications</span><span class="text-sm font-bold text-slate-700">Notifikasi siswa</span></span>
                 <span class="material-symbols-outlined text-slate-400 text-sm">chevron_right</span>
             </a>
@@ -553,17 +568,17 @@
 
             <div class="space-y-2 pt-1">
                 <p class="text-xs font-extrabold text-slate-400 mb-3">Akun &amp; sesi</p>
-                <a href="{{ route('profile') }}" class="flex items-center justify-between p-4 bg-slate-50 hover:bg-orange-50 rounded-2xl transition-all">
+                <a href="{{ $rt('profile') }}" class="flex items-center justify-between p-4 bg-slate-50 hover:bg-orange-50 rounded-2xl transition-all">
                     <span class="flex items-center gap-3"><span class="material-symbols-outlined text-slate-500">manage_accounts</span><span class="text-sm font-bold text-slate-700">Profil saya</span></span>
                     <span class="material-symbols-outlined text-slate-400 text-sm">chevron_right</span>
                 </a>
                 @if($isAdmin)
-                <a href="{{ route('settings') }}" class="flex items-center justify-between p-4 bg-slate-50 hover:bg-orange-50 rounded-2xl transition-all">
+                <a href="{{ $rt('settings') }}" class="flex items-center justify-between p-4 bg-slate-50 hover:bg-orange-50 rounded-2xl transition-all">
                     <span class="flex items-center gap-3"><span class="material-symbols-outlined text-slate-500">settings</span><span class="text-sm font-bold text-slate-700">Pengaturan</span></span>
                     <span class="material-symbols-outlined text-slate-400 text-sm">chevron_right</span>
                 </a>
                 @endif
-                <form method="POST" action="{{ route('logout') }}">
+                <form method="POST" action="{{ $rt('logout') }}">
                     @csrf
                     <button type="submit" class="w-full flex items-center gap-3 p-4 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl transition-all font-bold text-sm mt-2">
                         <span class="material-symbols-outlined">logout</span>Keluar sistem
@@ -652,7 +667,8 @@
         async function markNotificationAsRead(notificationId) {
             try {
                 const token = document.querySelector('meta[name="csrf-token"]').content;
-                const url = @json(route('admin.notifications.read', ['id' => 'NOTIFICATION_ID'])).replace('NOTIFICATION_ID', encodeURIComponent(notificationId));
+                const url = @json($rt('admin.notifications.read', ['id' => 'NOTIFICATION_ID'])).replace('NOTIFICATION_ID', encodeURIComponent(notificationId));
+                if (url === '#') return;
                 await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-TOKEN': token },
@@ -661,7 +677,9 @@
             } catch (e) { /* abaikan */ }
         }
 
-        function showAdminNotificationToast(title, message, notificationId = null, type = 'general', notificationData = null) {
+        let activeAdminNotificationToast = null;
+
+        function showAdminNotificationToast(title, message, notificationId = null, type = 'general', notificationData = null, additionalCount = 0) {
             const icons = {
                 new_student:   ['person_add', 'text-orange-600 bg-orange-100'],
                 new_complaint: ['report', 'text-orange-600 bg-orange-100'],
@@ -669,71 +687,111 @@
             };
             const [iconName, iconClass] = icons[type] || ['notifications', 'text-orange-600 bg-orange-100'];
 
+            if (activeAdminNotificationToast) activeAdminNotificationToast.remove();
+
             const toast = document.createElement('div');
-            toast.className = 'fixed top-4 lg:top-20 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-[110] bg-white rounded-2xl shadow-xl p-4 border border-slate-100 animate-fade-in-down cursor-pointer';
+            toast.className = 'fixed top-3 right-3 left-auto w-[calc(100%-1.5rem)] max-w-[20rem] z-[110] bg-white rounded-xl shadow-xl p-3 border border-slate-100 animate-fade-in-down cursor-pointer lg:top-20 lg:right-6 lg:w-96 lg:max-w-none lg:rounded-2xl lg:p-4';
+            activeAdminNotificationToast = toast;
             toast.innerHTML = `
-                <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-xl ${iconClass} flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined">${iconName}</span>
+                <div class="flex items-start gap-2 lg:gap-3">
+                    <div class="w-8 h-8 rounded-lg ${iconClass} flex items-center justify-center shrink-0 lg:w-10 lg:h-10 lg:rounded-xl">
+                        <span class="material-symbols-outlined text-[18px] lg:text-2xl">${iconName}</span>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h4 class="font-bold text-slate-800 text-sm">${escapeHtml(title)}</h4>
-                        <p class="text-xs text-slate-600 mt-1 break-words" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${escapeHtml(message)}</p>
+                        <h4 class="font-bold text-slate-800 text-xs lg:text-sm">${escapeHtml(title)}</h4>
+                        <p class="text-[11px] lg:text-xs text-slate-600 mt-0.5 lg:mt-1 break-words" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${escapeHtml(message)}${additionalCount ? ` (+${additionalCount} notifikasi lainnya)` : ''}</p>
                     </div>
-                    <button type="button" data-close class="shrink-0 p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100" aria-label="Tutup">
+                    <button type="button" data-close class="shrink-0 p-0.5 lg:p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100" aria-label="Tutup">
                         <span class="material-symbols-outlined text-sm">close</span>
                     </button>
                 </div>`;
 
-            toast.querySelector('[data-close]').addEventListener('click', (e) => { e.stopPropagation(); toast.remove(); });
+            const removeToast = () => {
+                toast.remove();
+                if (activeAdminNotificationToast === toast) activeAdminNotificationToast = null;
+            };
+            toast.querySelector('[data-close]').addEventListener('click', (e) => { e.stopPropagation(); removeToast(); });
             toast.addEventListener('click', async () => {
                 if (notificationData) {
                     if (type === 'new_student' && notificationData.student_id) {
-                        window.location.href = @json(route('students'));
+                        window.location.href = @json($rt('students'));
                         return;
                     } else if (type === 'new_complaint' && notificationData.complaint_id) {
-                        window.location.href = @json(route('admin.complaints.show', ['complaint' => 'COMPLAINT_ID'])).replace('COMPLAINT_ID', encodeURIComponent(notificationData.complaint_id));
+                        window.location.href = @json($rt('admin.complaints.show', ['complaint' => 'COMPLAINT_ID'])).replace('COMPLAINT_ID', encodeURIComponent(notificationData.complaint_id));
                         return;
                     } else if (type === 'finance' && notificationData.transaction_id) {
-                        window.location.href = @json(route('admin.finance.transactions.index'));
+                        window.location.href = @json($rt('admin.finance.transactions.index'));
                         return;
                     }
                 }
-                toast.remove();
+                removeToast();
             });
 
             document.body.appendChild(toast);
             if (notificationId) markNotificationAsRead(notificationId);
 
             setTimeout(() => {
+                if (activeAdminNotificationToast !== toast) return;
                 toast.style.transition = 'all 0.3s ease';
                 toast.style.opacity = '0';
                 toast.style.transform = 'translateY(-10px)';
-                setTimeout(() => toast.remove(), 300);
+                setTimeout(removeToast, 300);
             }, 5000);
         }
+
+        // Anti-spam: maksimal 1 toast tampil, jeda minimal antar toast, dan sinkron antar tab
+        const NOTIF_TOAST_AT_KEY = 'lastAdminToastAt';
+        const NOTIF_TOAST_COOLDOWN_MS = 30000; // 30 detik
 
         let notifBusy = false;
         async function checkNewAdminNotifications() {
             if (notifBusy || document.hidden) return;
+            if (activeAdminNotificationToast) return; // toast masih tampil, jangan ditumpuk
+
+            const notifUrl = @json($rt('admin.notifications.new'));
+            if (notifUrl === '#') return;
+
+            // Sinkronkan dengan tab lain: ambil ID terakhir & waktu toast terakhir
+            let lastToastAt = 0;
+            try {
+                lastShownNotificationId = Math.max(lastShownNotificationId, parseInt(localStorage.getItem(NOTIF_STORAGE_KEY) || '0', 10) || 0);
+                lastToastAt = parseInt(localStorage.getItem(NOTIF_TOAST_AT_KEY) || '0', 10) || 0;
+            } catch (e) {}
+            // Masih dalam jeda: notifikasi baru tidak hilang, akan digabung pada toast berikutnya
+            if (Date.now() - lastToastAt < NOTIF_TOAST_COOLDOWN_MS) return;
+
             notifBusy = true;
             try {
-                const response = await fetch(@json(route('admin.notifications.new')) + '?last_shown_id=' + encodeURIComponent(lastShownNotificationId), {
+                const response = await fetch(notifUrl + '?last_shown_id=' + encodeURIComponent(lastShownNotificationId), {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (!response.ok) return;
                 const data = await response.json();
-                if (data.notifications && data.notifications.length) {
-                    let maxId = lastShownNotificationId;
-                    data.notifications.forEach((n) => {
-                        showAdminNotificationToast(n.title, n.message, n.id, n.type, n.data);
-                        if (n.id > maxId) maxId = n.id;
-                    });
-                    if (maxId > lastShownNotificationId) {
-                        lastShownNotificationId = maxId;
-                        try { localStorage.setItem(NOTIF_STORAGE_KEY, String(maxId)); } catch (e) {}
-                    }
-                }
+
+                // Saring di sisi klien: hanya yang benar-benar baru
+                const fresh = (data.notifications || []).filter((n) => n.id > lastShownNotificationId);
+                if (!fresh.length) return;
+
+                const latest = fresh.reduce((a, b) => (b.id > a.id ? b : a));
+
+                // Simpan dulu sebelum tampil, supaya polling/tab lain tidak menampilkannya lagi
+                lastShownNotificationId = latest.id;
+                try {
+                    localStorage.setItem(NOTIF_STORAGE_KEY, String(latest.id));
+                    localStorage.setItem(NOTIF_TOAST_AT_KEY, String(Date.now()));
+                } catch (e) {}
+
+                // Notifikasi lain digabung (ditandai terbaca), hanya 1 toast yang muncul
+                fresh.forEach((n) => { if (n.id !== latest.id) markNotificationAsRead(n.id); });
+
+                showAdminNotificationToast(
+                    latest.title,
+                    latest.message,
+                    latest.id,
+                    latest.type,
+                    latest.data,
+                    fresh.length - 1
+                );
             } catch (e) { /* jaringan putus: coba lagi pada interval berikutnya */ }
             finally { notifBusy = false; }
         }
@@ -753,11 +811,12 @@
                 $type = 'user';
                 $label = 'User';
                 $secondary = $u->email ?? '';
+                $definedGuards = array_keys(config('auth.guards', []));
 
-                if (auth()->guard('student')->check()) {
+                if (in_array('student', $definedGuards) && auth()->guard('student')->check()) {
                     $guard = 'student'; $type = 'student'; $label = 'Siswa';
                     $secondary = $u->nisn ?? $u->username ?? '';
-                } elseif (auth()->guard('parent')->check()) {
+                } elseif (in_array('parent', $definedGuards) && auth()->guard('parent')->check()) {
                     $guard = 'parent'; $type = 'parent'; $label = 'Wali Murid';
                     $secondary = $u->email ?? '';
                 } elseif ($u instanceof \App\Models\User) {
