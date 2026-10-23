@@ -269,7 +269,7 @@
             <div class="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 @php
                     $team = [
-                        ['img'=>'krisna.png','name'=>'Krisna Aditama','badge'=>'Ketua Tim','icon'=>'fa-crown','color'=>'bg-red-600','a'=>'Kelas','av'=>'XI','b'=>'Jurusan','bv'=>'Axioo Class Program'],
+                        ['img'=>'Krisna.png','name'=>'Krisna Aditama','badge'=>'Ketua Tim','icon'=>'fa-crown','color'=>'bg-red-600','a'=>'Kelas','av'=>'XI','b'=>'Jurusan','bv'=>'Axioo Class Program'],
                         ['img'=>'mujahid.jpeg','name'=>'Mujahid Muhammad A.G','badge'=>'Anggota 1','icon'=>'fa-user-graduate','color'=>'bg-orange-600','a'=>'Kelas','av'=>'XI','b'=>'Jurusan','bv'=>'Axioo Class Program'],
                         ['img'=>'najih.jpeg','name'=>'Najih Banyu Wicaksono','badge'=>'Anggota 2','icon'=>'fa-user-graduate','color'=>'bg-amber-600','a'=>'Kelas','av'=>'XI','b'=>'Jurusan','bv'=>'Axioo Class Program'],
                         ['img'=>'jeri.jpg','name'=>'Jeri Wilaga','badge'=>'Pembimbing','icon'=>'fa-chalkboard-user','color'=>'bg-slate-800','a'=>'NBM','av'=>'—','b'=>'Mapel','bv'=>'Kejuruan ACP'],
