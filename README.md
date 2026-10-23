@@ -18,7 +18,7 @@ Sistem Informasi Sekolah berbasis web yang mengelola aktivitas akademik dan non-
 7. [Struktur Folder](#7-struktur-folder)
 8. [Tim Pengembang](#8-tim-pengembang)
 
-
+---
 ## 1. Nama dan Deskripsi Produk
 
 **Nama produk:** Smart EduHub
