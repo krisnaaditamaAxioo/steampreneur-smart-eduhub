@@ -49,6 +49,399 @@
     </button>
 </div>
 
+{{-- ============================================================
+     BANNER PROMO UPGRADE (BARU) - modal beranimasi setelah login, dikontrol Google Sheet
+     Sheet: share "Anyone with the link - Viewer", tab bernama "Banner"
+     Baris 1 = header: active | id | badge | title | description |
+                       button_text | button_url | image
+     Baris 2 dst = satu baris satu banner
+     ============================================================ --}}
+@php
+    // ====== PENGATURAN BANNER (ubah di sini) ======
+    $adSheetUrl   = 'https://docs.google.com/spreadsheets/d/1KQk_N-lvL7edMS7OdPCwLsCymOjeO2kTip4KXEMPRC0/edit?usp=sharing'; // kosongkan ('') untuk pakai default
+    // --- Jalur A (disarankan): Google Apps Script. Isi dua baris ini ---
+    $adScriptUrl  = 'https://script.google.com/macros/s/AKfycbwmRETssCAkD8m-eNMZ2_ph8XmaSMKYo3C6o3YcZk_LoUqm-nXQ44udH49J_Zo-xN8/exec';   // URL web app, contoh: https://script.google.com/macros/s/XXXX/exec
+    $adToken      = 'seh-7Kq2xP9mLd4Wz8Rb';   // API token dari menu "Banner SEH" di Sheet
+    // --- Jalur B (cadangan): Sheet publik, dipakai jika $adScriptUrl kosong ---
+    $adSheetTab   = 'Banner';
+    $adCacheMin   = 5;   // menit cache
+    $adMax        = 5;   // maksimal banner yang ditampilkan
+    $adSlideSec   = 6;   // detik per slide (otomatis geser)
+    $adDefault = [[
+        'active'      => '',
+        'id'          => '',
+        'badge'       => '',
+        'title'       => '',
+        'description' => '',
+        'button_text' => '',
+        'button_url'  => '',
+        'image'       => '',
+    ]];
+    // ==============================================
+
+    $adDriveId = function (?string $url) {
+        if (!$url) return null;
+        if (preg_match('#/d/([a-zA-Z0-9_-]+)#', $url, $m)) return $m[1];
+        if (preg_match('#[?&]id=([a-zA-Z0-9_-]+)#', $url, $m)) return $m[1];
+        return null;
+    };
+
+    $adFetch = function () use ($adSheetUrl, $adSheetTab, $adDriveId, $adScriptUrl, $adToken) {
+        // Jalur A: Google Apps Script (JSON)
+        if ($adScriptUrl) {
+            try {
+                $res = \Illuminate\Support\Facades\Http::timeout(8)->get($adScriptUrl, ['token' => $adToken]);
+                $rows = $res->successful() ? $res->json('banners') : null;
+                if (is_array($rows) && count($rows)) {
+                    \Illuminate\Support\Facades\Cache::forever('ads.banners.last_good', $rows);
+                    return $rows;
+                }
+            } catch (\Throwable $e) {}
+            return null;
+        }
+
+        // Jalur B: Sheet publik (CSV)
+        $sheetId = $adDriveId($adSheetUrl);
+        if (!$sheetId) return null;
+        try {
+            $res = \Illuminate\Support\Facades\Http::timeout(5)->get(
+                "https://docs.google.com/spreadsheets/d/{$sheetId}/gviz/tq",
+                ['tqx' => 'out:csv', 'sheet' => $adSheetTab, 'headers' => 1]
+            );
+            if (!$res->successful()) return null;
+
+            $csv = preg_replace('/^\xEF\xBB\xBF/', '', $res->body());
+            $stream = fopen('php://memory', 'r+');
+            fwrite($stream, $csv);
+            rewind($stream);
+
+            $allowed = ['active', 'id', 'badge', 'title', 'description', 'button_text', 'button_url', 'image'];
+            $header = null;
+            $rows = [];
+            while (($row = fgetcsv($stream)) !== false) {
+                if ($header === null) {
+                    // cari baris header (yang berisi kolom "title")
+                    $lower = array_map(fn ($c) => strtolower(trim((string) $c)), $row);
+                    if (in_array('title', $lower, true)) $header = $lower;
+                    continue;
+                }
+                $item = [];
+                foreach ($header as $i => $col) {
+                    if (in_array($col, $allowed, true)) $item[$col] = trim((string) ($row[$i] ?? ''));
+                }
+                if (!empty($item['title'])) $rows[] = $item;
+            }
+            fclose($stream);
+
+            if (empty($rows)) return null;
+            \Illuminate\Support\Facades\Cache::forever('ads.banners.last_good', $rows);
+            return $rows;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    };
+
+    // Ambil data: Sheet (cache) -> data terakhir yang berhasil -> default
+    if ($adScriptUrl || $adSheetUrl) {
+        $adRows = \Illuminate\Support\Facades\Cache::remember('ads.banners', now()->addMinutes($adCacheMin), $adFetch);
+        if (!$adRows) {
+            \Illuminate\Support\Facades\Cache::forget('ads.banners');
+            $adRows = \Illuminate\Support\Facades\Cache::get('ads.banners.last_good') ?? $adDefault;
+        }
+    } else {
+        $adRows = $adDefault;
+    }
+
+    // Validasi & normalisasi tiap banner
+    $ads = [];
+    foreach ($adRows as $adRaw) {
+        $adTitle = trim((string) ($adRaw['title'] ?? ''));
+        if ($adTitle === '' || !filter_var($adRaw['active'] ?? 'TRUE', FILTER_VALIDATE_BOOLEAN)) continue;
+
+        $adBtnUrl = (string) ($adRaw['button_url'] ?? '#');
+        $adBtnUrl = preg_match('#^(https?://|/|\#)#i', $adBtnUrl) ? $adBtnUrl : '#';
+
+        $adImg = $adRaw['image'] ?? '';
+        if ($adImg && str_contains($adImg, 'drive.google.com')) {
+            $adImgId = $adDriveId($adImg);
+            $adImg = $adImgId ? "https://drive.google.com/thumbnail?id={$adImgId}&sz=w1200" : null;
+        } elseif ($adImg && !str_starts_with($adImg, 'https://')) {
+            $adImg = null;
+        }
+
+        $ads[] = [
+            'id'          => (string) (($adRaw['id'] ?? '') !== '' ? $adRaw['id'] : md5($adTitle)),
+            'badge'       => (string) (($adRaw['badge'] ?? '') !== '' ? $adRaw['badge'] : 'Upgrade'),
+            'title'       => $adTitle,
+            'description' => (string) ($adRaw['description'] ?? ''),
+            'button_text' => (string) (($adRaw['button_text'] ?? '') !== '' ? $adRaw['button_text'] : 'Upgrade Sekarang'),
+            'button_url'  => $adBtnUrl,
+            'image'       => $adImg ?: null,
+        ];
+        if (count($ads) >= $adMax) break;
+    }
+@endphp
+
+@if(count($ads) > 0)
+<style>
+    @@keyframes adBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+    @@keyframes adBackdropOut { from { opacity: 1; } to { opacity: 0; } }
+    @@keyframes adCardIn {
+        0%   { opacity: 0; transform: translateY(48px) scale(.9); }
+        60%  { opacity: 1; transform: translateY(-8px) scale(1.02); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @@keyframes adCardOut {
+        from { opacity: 1; transform: translateY(0) scale(1); }
+        to   { opacity: 0; transform: translateY(24px) scale(.95); }
+    }
+    @@keyframes adFloat {
+        0%, 100% { transform: translateY(0) rotate(-4deg); }
+        50%      { transform: translateY(-10px) rotate(4deg); }
+    }
+    @@keyframes adShine {
+        0%   { transform: translateX(-120%) skewX(-20deg); }
+        60%, 100% { transform: translateX(260%) skewX(-20deg); }
+    }
+
+    #upgradeAdModal.ad-open .ad-backdrop  { animation: adBackdropIn .35s ease-out both; }
+    #upgradeAdModal.ad-open .ad-card      { animation: adCardIn .6s cubic-bezier(.22,1,.36,1) both; }
+    #upgradeAdModal.ad-closing .ad-backdrop { animation: adBackdropOut .25s ease-in both; }
+    #upgradeAdModal.ad-closing .ad-card     { animation: adCardOut .25s ease-in both; }
+
+    #upgradeAdModal .ad-float { animation: adFloat 3.2s ease-in-out infinite; }
+    #upgradeAdModal .ad-cta   { position: relative; overflow: hidden; }
+    #upgradeAdModal .ad-cta::after {
+        content: ''; position: absolute; top: 0; bottom: 0; width: 40%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+        animation: adShine 2.8s ease-in-out infinite;
+    }
+
+    #upgradeAdModal .ad-stagger { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .5s ease; }
+    #upgradeAdModal .ad-slide.ad-active .ad-stagger { opacity: 1; transform: none; }
+    #upgradeAdModal .ad-slide.ad-active .ad-stagger:nth-child(1) { transition-delay: .25s; }
+    #upgradeAdModal .ad-slide.ad-active .ad-stagger:nth-child(2) { transition-delay: .35s; }
+    #upgradeAdModal .ad-slide.ad-active .ad-stagger:nth-child(3) { transition-delay: .45s; }
+    #upgradeAdModal .ad-slide.ad-active .ad-stagger:nth-child(4) { transition-delay: .55s; }
+
+    @@media (prefers-reduced-motion: reduce) {
+        #upgradeAdModal * { animation: none !important; transition: none !important; }
+        #upgradeAdModal .ad-stagger { opacity: 1; transform: none; }
+    }
+</style>
+
+<div id="upgradeAdModal"
+     class="hidden fixed inset-0 items-center justify-center p-4"
+     style="z-index: 9999;"
+     role="dialog" aria-modal="true" aria-label="Promo upgrade aplikasi"
+     data-session="{{ hash('sha256', session()->getId()) }}"
+     data-interval="{{ (int) $adSlideSec }}">
+
+    <div class="ad-backdrop absolute inset-0 bg-slate-900/70 backdrop-blur-sm"></div>
+
+    <div class="ad-card relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden">
+
+        <!-- Tombol tutup -->
+        <button type="button" id="upgradeAdClose" aria-label="Tutup"
+                class="absolute top-3 right-3 z-30 w-9 h-9 rounded-full bg-black/25 hover:bg-black/40 text-white backdrop-blur flex items-center justify-center transition-colors">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+
+        <!-- Slide -->
+        <div class="overflow-hidden">
+            <div id="upgradeAdTrack" class="flex transition-transform duration-500 ease-out">
+                @foreach($ads as $ad)
+                <div class="ad-slide w-full flex-shrink-0" data-ad-id="{{ $ad['id'] }}">
+                    @if($ad['image'])
+                    <div class="relative h-48 bg-slate-100 overflow-hidden">
+                        <img src="{{ $ad['image'] }}" alt="{{ $ad['title'] }}" loading="lazy" referrerpolicy="no-referrer"
+                             onerror="this.parentElement.style.display='none'"
+                             class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                    </div>
+                    @else
+                    <div class="relative h-40 bg-gradient-to-br from-[#F6863B] via-[#EB4325] to-[#8A1E1E] flex items-center justify-center overflow-hidden">
+                        <div class="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full"></div>
+                        <div class="absolute -bottom-12 -left-8 w-36 h-36 bg-white/10 rounded-full"></div>
+                        <span class="ad-float material-symbols-outlined text-white text-[72px]" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+                    </div>
+                    @endif
+
+                    <div class="p-6 pb-4 text-center">
+                        <div class="ad-stagger">
+                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-wider">
+                                <span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+                                {{ $ad['badge'] }}
+                            </span>
+                        </div>
+                        <h3 class="ad-stagger mt-3 text-xl md:text-2xl font-black text-slate-900 tracking-tight">{{ $ad['title'] }}</h3>
+                        <p class="ad-stagger mt-2 text-sm text-slate-500 leading-relaxed">{{ $ad['description'] }}</p>
+                        <div class="ad-stagger mt-5">
+                            <a href="{{ $ad['button_url'] }}" target="_blank" rel="noopener noreferrer"
+                               class="ad-cta w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-orange-200 transition-colors">
+                                <span class="material-symbols-outlined text-[18px]">rocket_launch</span>
+                                {{ $ad['button_text'] }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+
+        <!-- Navigasi & footer -->
+        <div class="px-6 pb-5 text-center">
+            <div id="upgradeAdNav" class="flex items-center justify-center gap-3 mb-3">
+                <button type="button" id="upgradeAdPrev" aria-label="Sebelumnya"
+                        class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                </button>
+                <div id="upgradeAdDots" class="flex items-center gap-1.5"></div>
+                <button type="button" id="upgradeAdNext" aria-label="Berikutnya"
+                        class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                </button>
+            </div>
+
+            <label class="inline-flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+                <input type="checkbox" id="upgradeAdNever" class="rounded border-slate-300 text-orange-600 focus:ring-orange-500">
+                Jangan tampilkan lagi (2 jam)
+            </label>
+            <div>
+                <button type="button" id="upgradeAdLater" class="mt-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors">Nanti saja</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const modal = document.getElementById('upgradeAdModal');
+        if (!modal) return;
+
+        const track = document.getElementById('upgradeAdTrack');
+        const dots  = document.getElementById('upgradeAdDots');
+        const nav   = document.getElementById('upgradeAdNav');
+        const never = document.getElementById('upgradeAdNever');
+        const SESSION_KEY = 'ad_modal_session';
+        const DISMISS_MS  = 2 * 60 * 60 * 1000;   // "Jangan tampilkan lagi" berlaku 2 jam
+        const session = modal.dataset.session;
+
+        const ls = {
+            get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+            set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }
+        };
+
+        // Banner dianggap "disembunyikan" hanya jika ditandai kurang dari 2 jam lalu
+        function isDismissed(id) {
+            const t = parseInt(ls.get('ad_dismissed_' + id), 10);
+            if (!t || isNaN(t) || (Date.now() - t) >= DISMISS_MS) {
+                try { localStorage.removeItem('ad_dismissed_' + id); } catch (e) {}
+                return false;
+            }
+            return true;
+        }
+
+        // Sudah tampil di sesi login ini? -> jangan tampil lagi (muncul lagi setelah login berikutnya)
+        if (ls.get(SESSION_KEY) === session) { modal.remove(); return; }
+
+        // Buang banner yang pernah ditandai "jangan tampilkan lagi"
+        track.querySelectorAll('.ad-slide').forEach(function (s) {
+            if (isDismissed(s.dataset.adId)) s.remove();
+        });
+
+        const slides = () => track.querySelectorAll('.ad-slide');
+        if (slides().length === 0) { modal.remove(); return; }
+
+        let index = 0, timer = null, isOpen = false;
+
+        function render() {
+            const list = slides();
+            const n = list.length;
+            if (index >= n) index = 0;
+            track.style.transform = 'translateX(-' + (index * 100) + '%)';
+            list.forEach(function (s, i) { s.classList.toggle('ad-active', i === index); });
+
+            dots.innerHTML = '';
+            for (let i = 0; i < n; i++) {
+                const d = document.createElement('span');
+                d.className = 'h-1.5 rounded-full transition-all duration-300 ' + (i === index ? 'w-5 bg-orange-600' : 'w-1.5 bg-slate-300');
+                dots.appendChild(d);
+            }
+            nav.style.display = n > 1 ? 'flex' : 'none';
+        }
+
+        function go(i) { const n = slides().length; index = (i + n) % n; render(); }
+        function stop() { if (timer) { clearInterval(timer); timer = null; } }
+        function start() {
+            stop();
+            const sec = parseInt(modal.dataset.interval, 10) || 6;
+            if (slides().length > 1) timer = setInterval(function () { go(index + 1); }, sec * 1000);
+        }
+        function userNav(i) { stop(); go(i); }
+
+        function open() {
+            if (isOpen) return;
+            isOpen = true;
+            ls.set(SESSION_KEY, session);
+            document.body.style.overflow = 'hidden';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            void modal.offsetWidth;            // paksa reflow supaya animasi berjalan
+            modal.classList.add('ad-open');
+            render();
+            start();
+            const closeBtn = document.getElementById('upgradeAdClose');
+            if (closeBtn) closeBtn.focus({ preventScroll: true });
+        }
+
+        function close() {
+            if (!isOpen) return;
+            isOpen = false;
+            stop();
+            if (never.checked) {
+                slides().forEach(function (s) { ls.set('ad_dismissed_' + s.dataset.adId, String(Date.now())); });
+            }
+            modal.classList.remove('ad-open');
+            modal.classList.add('ad-closing');
+            setTimeout(function () {
+                modal.remove();
+                document.body.style.overflow = '';
+            }, 260);
+        }
+
+        document.getElementById('upgradeAdClose').addEventListener('click', close);
+        document.getElementById('upgradeAdLater').addEventListener('click', close);
+        modal.querySelector('.ad-backdrop').addEventListener('click', close);
+        document.getElementById('upgradeAdPrev').addEventListener('click', function () { userNav(index - 1); });
+        document.getElementById('upgradeAdNext').addEventListener('click', function () { userNav(index + 1); });
+
+        document.addEventListener('keydown', function (e) {
+            if (!isOpen) return;
+            if (e.key === 'Escape') close();
+            else if (e.key === 'ArrowRight') userNav(index + 1);
+            else if (e.key === 'ArrowLeft') userNav(index - 1);
+        });
+
+        // Swipe di HP
+        let x0 = null;
+        track.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; stop(); }, { passive: true });
+        track.addEventListener('touchend', function (e) {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 50) go(index + (dx < 0 ? 1 : -1));
+            x0 = null;
+        });
+
+        // Tampil sedikit setelah halaman siap (efek "setelah login")
+        const show = function () { setTimeout(open, 600); };
+        if (document.readyState === 'complete') show();
+        else window.addEventListener('load', show);
+    })();
+</script>
+@endif
+{{-- ================= AKHIR BANNER PROMO UPGRADE ================= --}}
+
 <!-- Stats Grid -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
     <!-- Total Students -->
