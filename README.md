@@ -9,7 +9,6 @@ Sistem Informasi Sekolah berbasis web yang mengelola aktivitas akademik dan non-
 ---
 
 ## Daftar Isi
-
 1. [Nama dan Deskripsi Produk](#1-nama-dan-deskripsi-produk)
 2. [Alur Inti](#2-alur-inti)
 3. [Cara Menjalankan (How to Run)](#3-cara-menjalankan-how-to-run)
@@ -19,7 +18,6 @@ Sistem Informasi Sekolah berbasis web yang mengelola aktivitas akademik dan non-
 7. [Struktur Folder](#7-struktur-folder)
 8. [Tim Pengembang](#8-tim-pengembang)
 
----
 
 ## 1. Nama dan Deskripsi Produk
 
