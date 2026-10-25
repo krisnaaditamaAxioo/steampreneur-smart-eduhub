@@ -31,6 +31,29 @@
     $labelCls  = 'mb-1.5 block text-sm font-semibold text-slate-700';
 
     $oldType = old('type', 'sakit');
+
+    // Pesan WhatsApp untuk mengabari admin saat pengajuan masih menunggu.
+    $waTextFor = function ($permit) use ($parent, $student, $typeLabel) {
+        $sd = \Carbon\Carbon::parse($permit->start_date);
+        $ed = !empty($permit->end_date) ? \Carbon\Carbon::parse($permit->end_date) : null;
+        $multiDay = $ed && !$ed->isSameDay($sd);
+
+        $dateText = $sd->translatedFormat('j F Y') . ($multiDay ? ' s/d ' . $ed->translatedFormat('j F Y') : '');
+
+        return "Assalamualaikum Wr. Wb.\n\n"
+            . "Saya " . $parent->name . " (wali dari " . $student->nama_lengkap . ") ingin memberitahu bahwa kami telah mengajukan izin "
+            . strtolower($typeLabel($permit->type)) . ".\n\n"
+            . "Detail:\n- Tanggal: " . $dateText . "\n- Alasan: " . $permit->reason
+            . "\n\nMohon untuk dicek dan disetujui ya. Terima kasih.";
+    };
+
+    $waHref = function ($contact, $text) {
+        $wa = preg_replace('/[^0-9]/', '', $contact->no_wa);
+        if (\Illuminate\Support\Str::startsWith($wa, '0')) {
+            $wa = '62' . substr($wa, 1);
+        }
+        return 'https://wa.me/' . $wa . '?text=' . urlencode($text);
+    };
 @endphp
 
 @section('content')
@@ -65,6 +88,13 @@
         <div role="status" class="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
             <span class="material-symbols-outlined mt-0.5 text-2xl text-emerald-600" style="font-variation-settings:'FILL' 1;">check_circle</span>
             <p class="text-sm font-semibold leading-relaxed">{{ session('success') }}</p>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div role="alert" class="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900">
+            <span class="material-symbols-outlined mt-0.5 text-2xl text-rose-600" style="font-variation-settings:'FILL' 1;">error</span>
+            <p class="text-sm font-semibold leading-relaxed">{{ session('error') }}</p>
         </div>
     @endif
 
@@ -118,6 +148,7 @@
                             <th scope="col" class="px-6 py-3.5 font-semibold">Jenis</th>
                             <th scope="col" class="px-6 py-3.5 font-semibold">Keterangan</th>
                             <th scope="col" class="px-6 py-3.5 font-semibold">Status</th>
+                            <th scope="col" class="px-6 py-3.5 text-right font-semibold">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -149,10 +180,37 @@
                                         {{ $m['label'] }}
                                     </span>
                                 </td>
+                                <td class="whitespace-nowrap px-6 py-4 text-right">
+                                    @if(!in_array($permit->status, ['approved', 'rejected'], true))
+                                        @php $waText = $waTextFor($permit); @endphp
+                                        <div class="flex items-center justify-end gap-2">
+                                            @foreach($contacts as $contact)
+                                                <a href="{{ $waHref($contact, $waText) }}" target="_blank" rel="noopener"
+                                                   title="Chat WhatsApp {{ $contact->name }}"
+                                                   class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100">
+                                                    <span class="material-symbols-outlined text-[16px]">chat</span>
+                                                    Chat WA
+                                                </a>
+                                            @endforeach
+                                            <form action="{{ route('parent.permit.destroy', $permit) }}" method="POST" class="inline"
+                                                  onsubmit="return confirm('Hapus pengajuan izin ini? Tindakan tidak dapat dibatalkan.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" title="Hapus pengajuan"
+                                                        class="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100">
+                                                    <span class="material-symbols-outlined text-[16px]">delete</span>
+                                                    Hapus
+                                                </button>
+                                            </form>
+                                        </div>
+                                    @else
+                                        <span class="text-slate-300">—</span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="px-6 py-14 text-center">
+                                <td colspan="5" class="px-6 py-14 text-center">
                                     <span class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-400">
                                         <span class="material-symbols-outlined text-3xl">assignment</span>
                                     </span>
@@ -191,6 +249,29 @@
                                 {{ $sd->translatedFormat('d M Y') }}@if($ed && !$ed->isSameDay($sd)) – {{ $ed->translatedFormat('d M Y') }}@endif
                             </p>
                             <p class="mt-1.5 text-sm leading-relaxed text-slate-600">{{ $permit->reason }}</p>
+
+                            @if(!in_array($permit->status, ['approved', 'rejected'], true))
+                                @php $waText = $waTextFor($permit); @endphp
+                                <div class="mt-3 flex flex-wrap items-center gap-2">
+                                    @foreach($contacts as $contact)
+                                        <a href="{{ $waHref($contact, $waText) }}" target="_blank" rel="noopener"
+                                           class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition active:scale-95">
+                                            <span class="material-symbols-outlined text-[16px]">chat</span>
+                                            Chat WA
+                                        </a>
+                                    @endforeach
+                                    <form action="{{ route('parent.permit.destroy', $permit) }}" method="POST"
+                                          onsubmit="return confirm('Hapus pengajuan izin ini? Tindakan tidak dapat dibatalkan.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition active:scale-95">
+                                            <span class="material-symbols-outlined text-[16px]">delete</span>
+                                            Hapus
+                                        </button>
+                                    </form>
+                                </div>
+                            @endif
                         </div>
                     </li>
                 @empty

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
@@ -107,7 +107,7 @@
                             $code = 'L';
                         } elseif ($attendance) {
                             $checkIn = $attendance->check_in ?: '-';
-                            $notes = $attendance->notes ?: '-';
+                            $notes = $attendance->location ?: '-';
                             if ($attendance->status === 'present') { $status = 'Ontime'; $code = 'O'; $ontime++; }
                             elseif ($attendance->status === 'late') { $status = 'Telat'; $code = 'T'; $late++; }
                             elseif ($attendance->status === 'excused') {

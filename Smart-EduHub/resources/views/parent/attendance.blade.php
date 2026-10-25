@@ -1,4 +1,4 @@
-﻿@extends('layouts.parent')
+@extends('layouts.parent')
 
 @section('title', 'Presensi Anak')
 @section('page_title', 'Presensi Harian Anak')
@@ -63,7 +63,7 @@
                 <p class="hidden text-sm text-emerald-100/80 sm:block">Tingkat kehadiran</p>
                 <p class="hidden text-lg font-bold sm:block">{{ $startLabel }} – {{ $endLabel }}</p>
                 <p class="text-sm text-emerald-100/80 sm:mt-1">
-                    Hadir <span class="font-bold text-white">{{ $attended }}</span> dari <span class="font-bold text-white">{{ $totalDays }}</span> hari tercatat
+                    Hadir <span class="font-bold text-white">{{ $attended }}</span> dari <span class="font-bold text-white">{{ $totalDays }}</span> hari efektif
                 </p>
 
                 {{-- Bar proporsi status --}}
@@ -150,7 +150,7 @@
                             <th scope="col" class="px-6 py-3.5 font-semibold">Tanggal</th>
                             <th scope="col" class="px-6 py-3.5 font-semibold">Jam masuk</th>
                             <th scope="col" class="px-6 py-3.5 font-semibold">Status</th>
-                            <th scope="col" class="px-6 py-3.5 font-semibold">Keterangan</th>
+                            <th scope="col" class="px-6 py-3.5 font-semibold">Lokasi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -170,7 +170,7 @@
                                     </span>
                                 </td>
                                 <td class="max-w-sm px-6 py-4 text-slate-500">
-                                    <span class="line-clamp-2">{{ $att->notes ?: '-' }}</span>
+                                    <span class="line-clamp-2">{{ $att->location ?: '-' }}</span>
                                 </td>
                             </tr>
                         @empty
@@ -214,8 +214,11 @@
                                     <span class="font-mono tabular-nums">{{ $att->check_in ?: '-' }}</span>
                                 </span>
                             </div>
-                            @if($att->notes)
-                                <p class="mt-2 text-sm leading-relaxed text-slate-500">{{ $att->notes }}</p>
+                            @if($att->location)
+                                <p class="mt-2 inline-flex items-start gap-1 text-sm leading-relaxed text-slate-500">
+                                    <span class="material-symbols-outlined text-[15px] leading-5">location_on</span>
+                                    <span>{{ $att->location }}</span>
+                                </p>
                             @endif
                         </div>
                     </li>

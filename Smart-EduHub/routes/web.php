@@ -322,6 +322,7 @@ Route::prefix('siswa')->name('siswa.')->group(function () {
         Route::post('/module/{id}/assignment', [StudentPortalController::class, 'submitAssignment'])->name('module.assignment.submit');
         Route::get('/permit', [StudentPortalController::class, 'permit'])->name('permit');
         Route::post('/permit', [StudentPortalController::class, 'storePermit'])->name('permit.store');
+        Route::delete('/permit/{permit}', [StudentPortalController::class, 'destroyPermit'])->name('permit.destroy');
         Route::get('/letters', [StudentPortalController::class, 'letters'])->name('letters');
         Route::get('/letters/view/{student}/{type}', [LetterController::class, 'print'])->name('letters.view');
         
@@ -404,11 +405,16 @@ Route::prefix('wali')->name('parent.')->group(function () {
         Route::get('/points', [ParentPortalController::class, 'points'])->name('points');
         Route::get('/permit', [ParentPortalController::class, 'permit'])->name('permit');
         Route::post('/permit', [ParentPortalController::class, 'storePermit'])->name('permit.store');
+        Route::delete('/permit/{permit}', [ParentPortalController::class, 'destroyPermit'])->name('permit.destroy');
         Route::get('/letters', [ParentPortalController::class, 'letters'])->name('letters');
         Route::get('/notifications', [ParentPortalController::class, 'notifications'])->name('notifications');
         Route::post('/notifications/{notification}/read', [ParentPortalController::class, 'markNotificationRead'])->name('notifications.read');
         Route::get('/complaints', [ParentPortalController::class, 'complaints'])->name('complaints');
         Route::post('/complaints', [ParentPortalController::class, 'storeComplaint'])->name('complaints.store');
+        Route::get('/complaints/{complaint}', [ParentPortalController::class, 'complaintShow'])->name('complaints.show');
+        Route::delete('/complaints/{complaint}', [ParentPortalController::class, 'destroyComplaint'])->name('complaints.destroy');
+        Route::get('/profile', [ParentPortalController::class, 'profile'])->name('profile');
+        Route::put('/profile', [ParentPortalController::class, 'updateProfile'])->name('profile.update');
         Route::post('/logout', [ParentAuthController::class, 'logout'])->name('logout');
     });
 });

@@ -137,6 +137,8 @@ class ParentPortalController extends Controller
             ->latest()
             ->get();
 
+        // Hitung statistik per hari (sama seperti portal siswa):
+        // - hari libur diabaikan, - hari tanpa catatan yang sudah lewat dihitung Alpa.
         $stats = [
             'present' => 0,
             'late' => 0,
@@ -144,17 +146,27 @@ class ParentPortalController extends Controller
             'excused' => 0,
         ];
 
-        foreach ($attendances as $att) {
-            if ($att->status === 'present') $stats['present']++;
-            elseif ($att->status === 'late') $stats['late']++;
-            elseif ($att->status === 'excused') $stats['excused']++;
-            elseif ($att->status === 'absent') $stats['absent']++;
-        }
-
         $period = \Carbon\CarbonPeriod::create($start_date, $end_date);
         $dates = [];
+        $today = date('Y-m-d');
+
         foreach ($period as $date) {
-            $dates[] = $date->format('Y-m-d');
+            $dateStr = $date->format('Y-m-d');
+            $dates[] = $dateStr;
+
+            if (\App\Models\Holiday::checkHoliday($dateStr)) {
+                continue;
+            }
+
+            $att = $attendances->firstWhere('date', $dateStr);
+
+            if ($att) {
+                if (in_array($att->status, ['present', 'late', 'excused', 'absent'], true)) {
+                    $stats[$att->status]++;
+                }
+            } elseif ($dateStr <= $today) {
+                $stats['absent']++;
+            }
         }
 
         if ($request->has('print')) {
@@ -206,7 +218,17 @@ class ParentPortalController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('parent.points', compact('parent', 'student', 'points'));
+        // Ringkasan poin seluruh tahun ajaran (bukan hanya halaman yang tampil).
+        $violationCount    = $student->points()->where('academic_year', $academicYear)->where('type', 'violation')->count();
+        $achievementCount  = $student->points()->where('academic_year', $academicYear)->where('type', 'achievement')->count();
+        $violationPoints   = $student->points()->where('academic_year', $academicYear)->where('type', 'violation')->sum('score');
+        $achievementPoints = $student->points()->where('academic_year', $academicYear)->where('type', 'achievement')->sum('score');
+        $totalPoints       = $violationPoints + $achievementPoints;
+
+        return view('parent.points', compact(
+            'parent', 'student', 'points',
+            'violationCount', 'achievementCount', 'violationPoints', 'achievementPoints', 'totalPoints'
+        ));
     }
 
     public function permit()
@@ -217,7 +239,10 @@ class ParentPortalController extends Controller
 
         $permits = $student->permits()->latest()->get();
 
-        return view('parent.permit', compact('parent', 'student', 'permits'));
+        // Kontak admin yang bisa dihubungi lewat WhatsApp (khusus pengajuan menunggu).
+        $contacts = \App\Models\User::where('role', 'admin')->get()->filter(fn ($u) => !empty($u->no_wa));
+
+        return view('parent.permit', compact('parent', 'student', 'permits', 'contacts'));
     }
 
     public function storePermit(Request $request)
@@ -248,6 +273,29 @@ class ParentPortalController extends Controller
         StudentPermit::create($validated);
 
         return back()->with('success', 'Pengajuan izin sakit/keperluan oleh Wali Murid berhasil dikirim.');
+    }
+
+    public function destroyPermit(StudentPermit $permit)
+    {
+        $parent = Auth::guard('parent')->user();
+        $student = $parent->student;
+
+        if (!$student || $permit->student_id !== $student->id) {
+            abort(403);
+        }
+
+        // Pengajuan yang sudah diproses admin tidak boleh dihapus.
+        if (in_array($permit->status, ['approved', 'rejected'], true)) {
+            return back()->with('error', 'Pengajuan yang sudah diproses tidak dapat dihapus.');
+        }
+
+        if ($permit->proof_photo) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($permit->proof_photo);
+        }
+
+        $permit->delete();
+
+        return back()->with('success', 'Pengajuan izin berhasil dihapus.');
     }
 
     public function letters()
@@ -315,5 +363,64 @@ class ParentPortalController extends Controller
         ]);
 
         return back()->with('success', 'Pengaduan berhasil dikirim ke Pihak Sekolah/Admin.');
+    }
+
+    public function complaintShow(\App\Models\Complaint $complaint)
+    {
+        $parent = Auth::guard('parent')->user();
+
+        if ($complaint->complainant_id != $parent->id || $complaint->complainant_type != $parent->getMorphClass()) {
+            abort(403);
+        }
+
+        return view('parent.complaint_detail', compact('parent', 'complaint'));
+    }
+
+    public function destroyComplaint(\App\Models\Complaint $complaint)
+    {
+        $parent = Auth::guard('parent')->user();
+
+        if ($complaint->complainant_id != $parent->id || $complaint->complainant_type != $parent->getMorphClass()) {
+            abort(403);
+        }
+
+        if ($complaint->proof_photo) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($complaint->proof_photo);
+        }
+
+        $complaint->delete();
+
+        return redirect()->route('parent.complaints')->with('success', 'Pengaduan berhasil dihapus.');
+    }
+
+    public function profile()
+    {
+        $parent = Auth::guard('parent')->user();
+
+        return view('parent.profile', compact('parent'));
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $parent = Auth::guard('parent')->user();
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:parents,email,' . $parent->id,
+            'phone' => 'nullable|string|max:20',
+            'gender' => 'nullable|in:L,P',
+            'password' => 'nullable|string|min:6|confirmed',
+        ]);
+
+        if ($request->filled('password')) {
+            // Kolom password sudah memakai cast 'hashed', jadi simpan nilai aslinya saja
+            $validated['password'] = $request->password;
+        } else {
+            unset($validated['password']);
+        }
+
+        $parent->update($validated);
+
+        return redirect()->route('parent.profile')->with('success', 'Profil berhasil diperbarui.');
     }
 }

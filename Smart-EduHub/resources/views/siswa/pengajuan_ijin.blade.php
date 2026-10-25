@@ -1,4 +1,4 @@
-﻿@extends('layouts.siswa')
+@extends('layouts.siswa')
 
 @section('title', 'Pengajuan Izin')
 @section('page_title', 'Perizinan Siswa')
@@ -168,6 +168,18 @@
         </div>
     @endif
 
+    {{-- Error notification --}}
+    @if(session('error'))
+        <div role="alert" class="no-print flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-rose-900">
+            <span class="material-symbols-outlined mt-0.5 text-rose-600" style="font-variation-settings: 'FILL' 1;">error</span>
+            <p class="flex-1 text-sm font-medium leading-relaxed">{{ session('error') }}</p>
+            <button type="button" aria-label="Tutup pemberitahuan" onclick="this.closest('[role=alert]').remove()"
+                    class="focus-ring -m-1 grid h-9 w-9 shrink-0 place-items-center rounded-full text-rose-700 hover:bg-rose-100">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-8">
 
         {{-- ================================================= --}}
@@ -327,6 +339,7 @@
 
                             $showWa    = $permit->status === 'pending' && $contacts->count() > 0;
                             $showPrint = $permit->status === 'approved';
+                            $showDelete = $statusKey === 'pending';
 
                             if ($showWa) {
                                 $waMessage = "Assalamualaikum Wr. Wb.\n\nSaya " . $student->name . " (NIS: " . $student->nis_siswa . ") ingin memberitahu bahwa saya telah mengajukan izin " . strtolower($permit->type) . ".\n\nDetail:\n- Tanggal: " . $start->translatedFormat('j F Y') . ($multiDay ? " s/d " . $end->translatedFormat('j F Y') : "") . "\n- Alasan: " . $permit->reason . "\n\nMohon untuk dicek dan disetujui ya. Terima kasih.";
@@ -357,7 +370,7 @@
                                 </div>
                             </div>
 
-                            @if($showWa || $showPrint)
+                            @if($showWa || $showPrint || $showDelete)
                                 <div class="no-print mt-3 flex flex-wrap items-center gap-2 sm:pl-[4.25rem]">
                                     @if($showWa)
                                         <span class="basis-full text-xs text-slate-500 sm:basis-auto">Kabari lewat WhatsApp</span>
@@ -384,6 +397,19 @@
                                             <span class="material-symbols-outlined text-base" aria-hidden="true">print</span>
                                             Cetak surat
                                         </button>
+                                    @endif
+
+                                    @if($showDelete)
+                                        <form action="{{ route('siswa.permit.destroy', $permit) }}" method="POST" class="contents"
+                                              onsubmit="return confirm('Hapus pengajuan izin ini? Tindakan tidak dapat dibatalkan.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                    class="focus-ring inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 active:scale-95">
+                                                <span class="material-symbols-outlined text-base" aria-hidden="true">delete</span>
+                                                Hapus
+                                            </button>
+                                        </form>
                                     @endif
                                 </div>
                             @endif

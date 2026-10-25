@@ -533,11 +533,14 @@
             }
         }
 
-        // Fungsi untuk menampilkan toast notifikasi
+        // Fungsi untuk menampilkan toast notifikasi (hanya satu toast yang tampil)
         function showNotificationToast(title, message, notificationId = null, type = 'admin_custom') {
+            // Hapus toast sebelumnya agar tidak menumpuk/berentetan
+            document.querySelectorAll('.notif-toast').forEach(el => el.remove());
+
             const toast = document.createElement('div');
-            toast.className = 'fixed top-4 right-4 z-[100] bg-white rounded-2xl shadow-xl p-4 border border-slate-100 max-w-sm animate-fade-in-down cursor-pointer';
-            
+            toast.className = 'notif-toast fixed top-3 right-3 left-3 sm:left-auto sm:right-4 sm:top-4 z-[100] bg-white rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-4 border border-slate-100 sm:w-80 max-w-full animate-fade-in-down cursor-pointer';
+
             // Icon berdasarkan tipe
             let iconClass = 'text-brand-600 bg-brand-100';
             let iconName = 'notifications';
@@ -550,15 +553,15 @@
             }
             
             toast.innerHTML = `
-                <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-xl ${iconClass} flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined">${iconName}</span>
+                <div class="flex items-start gap-2.5 sm:gap-3">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${iconClass} flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-lg sm:text-2xl">${iconName}</span>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h4 class="font-bold text-slate-800 text-sm">${title}</h4>
-                        <p class="text-xs text-slate-600 mt-1 line-clamp-3">${message}</p>
+                        <h4 class="font-bold text-slate-800 text-[13px] sm:text-sm line-clamp-1">${title}</h4>
+                        <p class="text-[11px] sm:text-xs text-slate-600 mt-0.5 sm:mt-1 line-clamp-2 sm:line-clamp-3">${message}</p>
                     </div>
-                    <button onclick="event.stopPropagation(); this.closest('div').remove()" class="shrink-0 p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+                    <button onclick="event.stopPropagation(); this.closest('.notif-toast').remove()" class="shrink-0 p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
                         <span class="material-symbols-outlined text-sm">close</span>
                     </button>
                 </div>
@@ -627,15 +630,29 @@
                         const data = await response.json();
                         
                         if (data.notifications && data.notifications.length > 0) {
-                            // Tampilkan toast untuk setiap notifikasi baru
-                            data.notifications.forEach(notification => {
-                                showNotificationToast(notification.title, notification.message, notification.id, notification.type);
-                                
-                                // Update lastShownNotificationId
-                                if (notification.id > lastShownNotificationId) {
-                                    lastShownNotificationId = notification.id;
-                                }
-                            });
+                            // Urutkan dari yang terbaru
+                            const list = [...data.notifications].sort((a, b) => b.id - a.id);
+
+                            // Tandai id terakhir yang sudah ditampilkan agar tidak diulang
+                            const maxId = list[0].id;
+                            if (maxId > lastShownNotificationId) {
+                                lastShownNotificationId = maxId;
+                            }
+
+                            if (list.length === 1) {
+                                // Satu notifikasi: tampilkan detailnya
+                                const n = list[0];
+                                showNotificationToast(n.title, n.message, n.id, n.type);
+                            } else {
+                                // Lebih dari satu: cukup satu toast ringkasan
+                                const latest = list[0];
+                                showNotificationToast(
+                                    latest.title,
+                                    `Ada ${list.length} notifikasi baru untuk Anda. Ketuk untuk melihat.`,
+                                    null,
+                                    latest.type
+                                );
+                            }
                         }
                     } catch (e) {
                         console.error('Error checking new notifications:', e);

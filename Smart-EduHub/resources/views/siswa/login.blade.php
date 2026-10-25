@@ -55,7 +55,7 @@
         .blob-auth.d1 { animation-delay: -6s; }
         .blob-auth.d2 { animation-delay: -12s; }
 
-        /* Grid halus di panel kiri */
+        /* Grid halus di panel kiri (desktop) */
         .grid-fade {
             background-image:
                 linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
@@ -64,27 +64,35 @@
             -webkit-mask-image: radial-gradient(ellipse at 30% 40%, #000 20%, transparent 75%);
                     mask-image: radial-gradient(ellipse at 30% 40%, #000 20%, transparent 75%);
         }
+        /* Grid hero mobile: memudar ke bawah */
+        .grid-fade-mobile {
+            background-image:
+                linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px);
+            background-size: 36px 36px;
+            -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 85%);
+                    mask-image: linear-gradient(to bottom, #000 0%, transparent 85%);
+        }
 
-        /* ---------- Card ---------- */
-        .glass-auth {
-            background: rgba(255,255,255,0.96);
-            backdrop-filter: blur(28px);
-            -webkit-backdrop-filter: blur(28px);
-            border: 1px solid rgba(255,255,255,0.6);
-            box-shadow: 0 30px 80px -20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.7);
+        /* ---------- Sheet / kartu form ---------- */
+        .sheet-card {
+            background: #fff;
+            box-shadow: 0 -24px 60px -24px rgba(0,0,0,0.5);
+        }
+        @media (min-width: 640px) {
+            .sheet-card { box-shadow: 0 30px 80px -20px rgba(0,0,0,0.55); }
         }
         @media (min-width: 1024px) {
-            .glass-auth {
-                background: transparent; border: 0; box-shadow: none;
-                backdrop-filter: none; -webkit-backdrop-filter: none;
-            }
+            .sheet-card { background: transparent; box-shadow: none; }
         }
 
-        .animate-fade-in-up { animation: fadeUp .5s cubic-bezier(.16,1,.3,1) both; }
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(16px); }
+        /* Satu gerakan masuk saat halaman dibuka: sheet naik dari bawah */
+        .sheet-rise { animation: sheetRise .65s cubic-bezier(.16,1,.3,1) both; }
+        @keyframes sheetRise {
+            from { opacity: 0; transform: translateY(36px); }
             to   { opacity: 1; transform: translateY(0); }
         }
+
         .animate-step { animation: stepIn .28s cubic-bezier(.16,1,.3,1) both; }
         @keyframes stepIn {
             from { opacity: 0; transform: translateX(10px); }
@@ -92,6 +100,11 @@
         }
 
         .step-hidden { display: none !important; }
+
+        /* Saat input PIN (mobile): hero dipadatkan agar keypad lega */
+        main:has(#step2:not(.step-hidden)) .hero-sub { display: none; }
+        main:has(#step2:not(.step-hidden)) .hero-h1  { margin-top: 1.25rem; }
+        main:has(#step2:not(.step-hidden)) .hero     { padding-bottom: 2.75rem; }
 
         /* ---------- PIN ---------- */
         .pin-box {
@@ -137,7 +150,7 @@
 
         /* Layar pendek (landscape HP) */
         @media (max-height: 640px) {
-            .intro-block { display: none; }
+            .intro-block, .hero-sub { display: none; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -147,6 +160,14 @@
 </head>
 <body class="bg-slate-950 text-slate-900 overflow-x-hidden">
 
+    <!-- Sprite ikon WhatsApp (tombol bantuan mobile & tombol melayang desktop) -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <symbol id="icon-wa" viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.488-.491-.672-.5-.198-.01-.422-.015-.645-.015-.223 0-.585.085-.892.413-.307.329-1.168 1.137-1.168 2.773 0 1.636 1.195 3.213 1.363 3.449.167.237 2.36 3.605 5.719 5.033.799.335 1.437.531 1.927.678.813.243 1.551.208 2.134.125.651-.09 1.998-.814 2.276-1.599.278-.785.278-1.455.198-1.599-.08-.144-.297-.237-.621-.386l-.001.001z"/>
+            <path d="M12.002 2.163c-5.435 0-9.84 4.405-9.84 9.842 0 1.73.464 3.346 1.271 4.779l-1.338 4.894 5.024-1.309c1.39.755 2.988 1.189 4.883 1.189h.001c5.435 0 9.84-4.406 9.84-9.843 0-2.636-1.027-5.107-2.891-6.97a9.804 9.804 0 0 0-6.949-2.881zm6.875 14.407c-.198.56-.967 1.064-1.624 1.139-.415.047-.968.068-1.637-.087-.376-.088-.859-.278-1.478-.544-2.624-1.138-4.336-3.773-4.448-3.945-.112-.172-.919-1.22-.919-2.335 0-1.115.482-1.663.656-1.895.174-.232.379-.29.504-.29.126 0 .251.004.362.009.124.007.325-.047.507.372.184.42.626 1.453.68 1.558.055.106.092.227.017.363-.075.137-.112.224-.223.341-.112.118-.232.259-.333.347-.113.098-.227.213-.097.42.131.208 1.166 1.916 2.513 3.093.343.3.623.478.892.574.293.104.56.089.771.054.197-.034.624-.253.951-.497.327-.244.654-.206.904-.122.25.085 1.566.658 1.836.778.27.12.451.18.515.278.065.096.011.193-.055.273-.168.15-.129.16-.347.073-.47-.042-.123-.118-.435-.764-.579-.402-.178-.783-.208-.895-.216z"/>
+        </symbol>
+    </svg>
+
     <!-- Background mesh (mobile & tablet) -->
     <div class="fixed inset-0 mesh-auth-bg -z-10 overflow-hidden lg:hidden" aria-hidden="true">
         <div class="blob-auth absolute top-[-10%] left-[-10%] w-[22rem] sm:w-[32rem] aspect-square rounded-full bg-orange-400/30 blur-[100px]"></div>
@@ -154,7 +175,7 @@
         <div class="blob-auth d2 absolute top-[40%] right-[25%] w-60 sm:w-72 aspect-square rounded-full bg-blue-400/15 blur-[90px]"></div>
     </div>
 
-    <main class="min-h-dvh lg:grid lg:grid-cols-2 xl:grid-cols-[1.1fr_1fr]">
+    <main class="min-h-dvh flex flex-col lg:grid lg:grid-cols-2 xl:grid-cols-[1.1fr_1fr]">
 
         <!-- ===================== PANEL KIRI (desktop) ===================== -->
         <aside class="relative hidden lg:flex flex-col justify-between overflow-hidden mesh-auth-bg text-white p-10 xl:p-16">
@@ -203,32 +224,56 @@
         </aside>
 
         <!-- ===================== PANEL FORM ===================== -->
-        <section class="relative flex items-center justify-center lg:bg-white px-4 sm:px-8 py-8 sm:py-12 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
+        <section class="relative flex flex-1 flex-col lg:items-center lg:justify-center lg:bg-white lg:px-8 lg:py-12">
 
-            <div class="w-full max-w-md lg:max-w-sm xl:max-w-md animate-fade-in-up">
+            <!-- Hero (mobile & tablet) -->
+            <header class="hero relative lg:hidden overflow-hidden px-6 pb-14 pt-[max(2.25rem,env(safe-area-inset-top))] text-white sm:pb-16">
+                <div class="pointer-events-none absolute inset-0 grid-fade-mobile" aria-hidden="true"></div>
+                <div class="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-white/10" aria-hidden="true"></div>
+                <div class="pointer-events-none absolute -bottom-10 left-1/4 h-28 w-28 rounded-full bg-white/5" aria-hidden="true"></div>
 
-                <!-- Brand (mobile & tablet) -->
-                <div class="lg:hidden text-center mb-6">
-                    <div class="inline-flex items-center justify-center p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-lg mb-3">
-                        <img src="{{ asset('images/SEH.png') }}" alt="Smart EduHub Logo"
-                             class="h-8 sm:h-9 w-auto object-contain brightness-0 invert"
-                             onerror="this.style.display='none'">
-                    </div>
-                    <h1 class="font-display text-2xl font-extrabold text-white tracking-tight">Smart EduHub</h1>
-                    <p class="text-xs font-semibold text-orange-100/70 mt-1">Portal Siswa &amp; Wali Murid</p>
-                </div>
-
-                <!-- CARD -->
-                <div id="formCard" class="glass-auth rounded-[1.75rem] sm:rounded-[2rem] p-5 sm:p-8 lg:p-0">
-
-                    <!-- Intro -->
-                    <div id="introBlock" class="intro-block mb-6">
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-bold">
-                            <span class="material-symbols-outlined text-sm" style="font-variation-settings:'FILL' 1;">school</span>
-                            Portal Siswa
+                <div class="relative mx-auto max-w-md">
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="rounded-xl border border-white/15 bg-white/10 p-2 backdrop-blur-md">
+                            <img src="{{ asset('images/SEH.png') }}" alt="Smart EduHub" class="h-6 w-auto object-contain brightness-0 invert" onerror="this.style.display='none'">
                         </span>
-                        <h2 class="font-display text-[1.75rem] sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-3 leading-tight">Selamat datang kembali</h2>
-                        <p class="text-sm text-slate-500 mt-1.5">Masukkan NISN atau username untuk melanjutkan.</p>
+                        <span class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-orange-50 backdrop-blur-md">
+                            <span class="material-symbols-outlined text-sm text-amber-300" style="font-variation-settings:'FILL' 1;">school</span>
+                            Siswa
+                        </span>
+                    </div>
+
+                    <h1 class="hero-h1 mt-8 font-display text-[2rem] font-extrabold leading-[1.1] tracking-tight sm:text-4xl">
+                        Selamat datang kembali
+                    </h1>
+                    <p class="hero-sub mt-2.5 max-w-xs text-sm leading-relaxed text-orange-50/80">
+                        Masuk dengan PIN 6 digit, atau cukup scan ID card.
+                    </p>
+                </div>
+            </header>
+
+            <!-- Pembungkus sheet -->
+            <div class="sheet-rise relative z-10 mx-auto -mt-7 flex w-full max-w-md flex-1 flex-col sm:mb-10 sm:flex-none lg:mt-0 lg:mb-0 lg:max-w-sm xl:max-w-md">
+
+                <!-- CARD / SHEET -->
+                <div id="formCard" class="sheet-card flex-1 rounded-t-[2rem] px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-7 sm:flex-none sm:rounded-[2rem] sm:px-8 sm:pb-8 sm:pt-8 lg:rounded-none lg:p-0">
+
+                    <!-- Intro (disembunyikan saat langkah PIN) -->
+                    <div id="introBlock" class="intro-block mb-6">
+                        <!-- mobile & tablet -->
+                        <div class="lg:hidden">
+                            <h2 class="font-display text-xl font-extrabold tracking-tight text-slate-900">Masuk ke akun Anda</h2>
+                            <p class="mt-1 text-sm text-slate-500">Masukkan NISN atau username untuk melanjutkan.</p>
+                        </div>
+                        <!-- desktop -->
+                        <div class="hidden lg:block">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-bold">
+                                <span class="material-symbols-outlined text-sm" style="font-variation-settings:'FILL' 1;">school</span>
+                                Portal Siswa
+                            </span>
+                            <h2 class="font-display text-3xl font-extrabold text-slate-900 tracking-tight mt-3 leading-tight">Selamat datang kembali</h2>
+                            <p class="text-sm text-slate-500 mt-1.5">Masukkan NISN atau username untuk melanjutkan.</p>
+                        </div>
                     </div>
 
                     <!-- Error -->
@@ -255,7 +300,7 @@
                                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                             <span class="material-symbols-outlined text-slate-400 group-focus-within:text-orange-600 text-xl transition-colors">person</span>
                                         </div>
-                                        <input class="block w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-base sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:ring-4 focus:ring-orange-500/15 focus:border-orange-500 focus:bg-white transition-all duration-200"
+                                        <input class="block h-14 sm:h-auto w-full pl-12 pr-4 sm:py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-base sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:ring-4 focus:ring-orange-500/15 focus:border-orange-500 focus:bg-white transition-all duration-200"
                                                id="username" name="username" placeholder="Contoh: 0012345678" type="text" required
                                                autocomplete="username" inputmode="text" autocapitalize="none" spellcheck="false"/>
                                     </div>
@@ -263,7 +308,7 @@
                                 </div>
 
                                 <button type="button" onclick="goToStep2()"
-                                    class="w-full flex justify-center items-center gap-2 py-3.5 px-4 rounded-2xl text-white bg-gradient-to-r from-orange-600 to-amber-500 hover:brightness-110 font-bold text-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/30 active:scale-[0.98] transition-all duration-200 shadow-lg shadow-orange-500/30">
+                                    class="w-full h-14 sm:h-auto flex justify-center items-center gap-2 sm:py-3.5 px-4 rounded-2xl text-white bg-gradient-to-r from-orange-600 to-amber-500 hover:brightness-110 font-bold text-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/30 active:scale-[0.98] transition-all duration-200 shadow-lg shadow-orange-500/30">
                                     Lanjutkan
                                     <span class="material-symbols-outlined text-xl">arrow_forward</span>
                                 </button>
@@ -325,40 +370,42 @@
                         </form>
 
                         <!-- OPSI LAIN (hanya di step 1) -->
-                        <div id="altOptions" class="mt-5">
+                        <div id="altOptions" class="mt-6">
                             <div class="flex items-center gap-3 mb-4" aria-hidden="true">
                                 <div class="h-px flex-1 bg-slate-200"></div>
                                 <span class="text-xs font-semibold text-slate-400">atau masuk lebih cepat</span>
                                 <div class="h-px flex-1 bg-slate-200"></div>
                             </div>
 
-                            <div id="altGrid" class="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
+                            <div id="altGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <!-- Scan ID card -->
                                 <form action="{{ route('siswa.login') }}" method="POST" id="scanLoginForm" class="contents">
                                     @csrf
                                     <input id="scan_nis" name="scan_nis" type="hidden">
                                     <button type="button" id="openCameraButton"
-                                        class="group flex min-[420px]:flex-col items-center min-[420px]:items-start gap-3 min-[420px]:gap-4 p-3.5 sm:p-4 rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 hover:border-orange-300 hover:shadow-md hover:shadow-orange-500/10 transition-all text-left active:scale-[0.98]">
-                                        <span class="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/30">
+                                        class="group flex sm:flex-col items-center sm:items-start gap-3.5 sm:gap-4 p-3.5 sm:p-4 rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 hover:border-orange-300 hover:shadow-md hover:shadow-orange-500/10 transition-all text-left active:scale-[0.98]">
+                                        <span class="w-11 h-11 sm:w-10 sm:h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/30">
                                             <span class="material-symbols-outlined">qr_code_scanner</span>
                                         </span>
-                                        <span class="min-w-0">
+                                        <span class="min-w-0 flex-1">
                                             <span class="block text-sm font-extrabold text-slate-900 leading-tight">Scan ID card</span>
                                             <span class="block text-xs text-slate-500 mt-0.5 leading-snug">Pakai kamera, masuk otomatis</span>
                                         </span>
+                                        <span class="material-symbols-outlined text-orange-300 group-hover:text-orange-600 transition-colors sm:hidden">chevron_right</span>
                                     </button>
                                 </form>
 
                                 <!-- Quick login -->
                                 <button type="button" id="siswaQuickTrigger"
-                                    class="group flex min-[420px]:flex-col items-center min-[420px]:items-start gap-3 min-[420px]:gap-4 p-3.5 sm:p-4 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 hover:shadow-md hover:shadow-slate-900/5 transition-all text-left active:scale-[0.98]">
-                                    <span class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0">
+                                    class="group flex sm:flex-col items-center sm:items-start gap-3.5 sm:gap-4 p-3.5 sm:p-4 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 hover:shadow-md hover:shadow-slate-900/5 transition-all text-left active:scale-[0.98]">
+                                    <span class="w-11 h-11 sm:w-10 sm:h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0">
                                         <span class="material-symbols-outlined">history</span>
                                     </span>
-                                    <span class="min-w-0">
+                                    <span class="min-w-0 flex-1">
                                         <span class="block text-sm font-extrabold text-slate-900 leading-tight">Akun tersimpan</span>
                                         <span class="block text-xs text-slate-500 mt-0.5 leading-snug">Pilih akun, tanpa PIN</span>
                                     </span>
+                                    <span class="material-symbols-outlined text-slate-400 group-hover:text-orange-600 transition-colors sm:hidden">chevron_right</span>
                                 </button>
                             </div>
 
@@ -371,7 +418,7 @@
                     </div>
 
                     <!-- Bantuan -->
-                    <footer class="mt-6 pt-5 border-t border-slate-100 text-center space-y-1.5">
+                    <footer class="mt-7 pt-5 border-t border-slate-100 text-center space-y-1.5">
                         <p class="text-sm text-slate-500 font-medium">
                             Lupa PIN? <a class="text-orange-600 hover:underline font-bold" href="{{ route('siswa.forgot-pin') }}">Reset PIN</a>
                         </p>
@@ -379,15 +426,15 @@
                             Belum punya akun? <a class="text-orange-600 hover:underline font-bold" href="{{ route('registrations.form') }}">Daftar sekarang</a>
                         </p>
                     </footer>
-                </div>
 
-                <!-- Footer (mobile & tablet) -->
-                <div class="lg:hidden mt-6 flex flex-col items-center gap-1.5 text-center">
-                    <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-orange-400 text-lg" style="font-variation-settings:'FILL' 1;">verified_user</span>
-                        <p class="text-xs font-semibold text-white/60">Koneksi aman</p>
+                    <!-- Bantuan WhatsApp (mobile & tablet) -->
+                    <div class="mt-5 flex justify-center lg:hidden">
+                        <a href="https://wa.me/6282289635649" target="_blank" rel="noopener"
+                           class="inline-flex items-center gap-2 rounded-full bg-green-50 px-4 py-2.5 text-xs font-bold text-green-700 ring-1 ring-inset ring-green-200 transition active:scale-95">
+                            <svg class="h-4 w-4" fill="currentColor" aria-hidden="true"><use href="#icon-wa"/></svg>
+                            Butuh bantuan? Chat admin
+                        </a>
                     </div>
-                    <p class="text-xs text-white/40 font-medium">&copy; 2026 Smart EduHub. All rights reserved.</p>
                 </div>
             </div>
         </section>
@@ -459,13 +506,10 @@
         </div>
     </div>
 
-    <!-- WhatsApp -->
+    <!-- WhatsApp (desktop; di mobile sudah ada tombol bantuan di dalam sheet) -->
     <a href="https://wa.me/6282289635649" target="_blank" rel="noopener" aria-label="Hubungi lewat WhatsApp"
-       class="fixed right-4 sm:right-6 bottom-[max(1rem,env(safe-area-inset-bottom))] sm:bottom-6 w-12 h-12 sm:w-14 sm:h-14 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center shadow-xl shadow-green-500/30 transition-all hover:scale-110 active:scale-95 z-50">
-        <svg class="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.488-.491-.672-.5-.198-.01-.422-.015-.645-.015-.223 0-.585.085-.892.413-.307.329-1.168 1.137-1.168 2.773 0 1.636 1.195 3.213 1.363 3.449.167.237 2.36 3.605 5.719 5.033.799.335 1.437.531 1.927.678.813.243 1.551.208 2.134.125.651-.09 1.998-.814 2.276-1.599.278-.785.278-1.455.198-1.599-.08-.144-.297-.237-.621-.386l-.001.001z"/>
-            <path d="M12.002 2.163c-5.435 0-9.84 4.405-9.84 9.842 0 1.73.464 3.346 1.271 4.779l-1.338 4.894 5.024-1.309c1.39.755 2.988 1.189 4.883 1.189h.001c5.435 0 9.84-4.406 9.84-9.843 0-2.636-1.027-5.107-2.891-6.97a9.804 9.804 0 0 0-6.949-2.881zm6.875 14.407c-.198.56-.967 1.064-1.624 1.139-.415.047-.968.068-1.637-.087-.376-.088-.859-.278-1.478-.544-2.624-1.138-4.336-3.773-4.448-3.945-.112-.172-.919-1.22-.919-2.335 0-1.115.482-1.663.656-1.895.174-.232.379-.29.504-.29.126 0 .251.004.362.009.124.007.325-.047.507.372.184.42.626 1.453.68 1.558.055.106.092.227.017.363-.075.137-.112.224-.223.341-.112.118-.232.259-.333.347-.113.098-.227.213-.097.42.131.208 1.166 1.916 2.513 3.093.343.3.623.478.892.574.293.104.56.089.771.054.197-.034.624-.253.951-.497.327-.244.654-.206.904-.122.25.085 1.566.658 1.836.778.27.12.451.18.515.278.065.096.011.193-.055.273-.168.15-.129.16-.347.073-.47-.042-.123-.118-.435-.764-.579-.402-.178-.783-.208-.895-.216z"/>
-        </svg>
+       class="fixed bottom-6 right-6 z-50 hidden h-14 w-14 items-center justify-center rounded-full bg-green-500 shadow-xl shadow-green-500/30 transition-all hover:scale-110 hover:bg-green-600 active:scale-95 lg:flex">
+        <svg class="h-7 w-7 text-white" fill="currentColor" aria-hidden="true"><use href="#icon-wa"/></svg>
     </a>
 
     <!-- ===================== JAVASCRIPT ===================== -->
@@ -680,9 +724,9 @@
 
         if (!SHOW_SAVED_ACCOUNTS) {
             qlTrigger?.classList.add('step-hidden');
-            $('altGrid')?.classList.remove('min-[420px]:grid-cols-2');
+            $('altGrid')?.classList.remove('sm:grid-cols-2');
             // Tombol scan jadi satu baris penuh saat sendirian
-            openCameraButton?.classList.remove('min-[420px]:flex-col', 'min-[420px]:items-start', 'min-[420px]:gap-4');
+            openCameraButton?.classList.remove('sm:flex-col', 'sm:items-start', 'sm:gap-4');
             const divider = document.querySelector('#altOptions span.text-slate-400');
             if (divider) divider.textContent = 'atau masuk dengan';
         }

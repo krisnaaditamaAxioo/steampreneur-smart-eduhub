@@ -306,6 +306,8 @@ class StudentPortalController extends Controller
         
         if ($mode === 'summary') {
             $months = [];
+            $angkatan = $student->angkatan?->name ?? null;
+
             foreach ($period as $date) {
                 $monthKey = $date->format('Y-m');
                 if (!isset($months[$monthKey])) {
@@ -320,11 +322,11 @@ class StudentPortalController extends Controller
                 $students = collect([$student]);
                 $headmaster = \App\Models\Setting::get('headmaster_name', '..........................');
                 $headmaster_nip = \App\Models\Setting::get('headmaster_nip', '..........................');
-                
-                return view('attendance.print_summary_report', compact('students', 'months', 'start_date', 'end_date', 'headmaster', 'headmaster_nip'));
+
+                return view('attendance.print_summary_report', compact('students', 'months', 'start_date', 'end_date', 'headmaster', 'headmaster_nip', 'angkatan'));
             }
 
-            return view('siswa.riwayat_absen_summary', compact('student', 'attendances', 'stats', 'months', 'start_date', 'end_date', 'mode'));
+            return view('siswa.riwayat_absen_summary', compact('student', 'attendances', 'stats', 'months', 'start_date', 'end_date', 'mode', 'angkatan'));
         }
 
         $dates = [];
@@ -774,6 +776,28 @@ class StudentPortalController extends Controller
         StudentPermit::create($validated);
 
         return back()->with('success', 'Pengajuan izin berhasil dikirim.');
+    }
+
+    public function destroyPermit(StudentPermit $permit)
+    {
+        $student = Auth::guard('student')->user();
+
+        if (!$student || $permit->student_id !== $student->id) {
+            abort(403);
+        }
+
+        // Pengajuan yang sudah diproses admin tidak boleh dihapus.
+        if (in_array($permit->status, ['approved', 'rejected'], true)) {
+            return back()->with('error', 'Pengajuan yang sudah diproses tidak dapat dihapus.');
+        }
+
+        if ($permit->proof_photo) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($permit->proof_photo);
+        }
+
+        $permit->delete();
+
+        return back()->with('success', 'Pengajuan izin berhasil dihapus.');
     }
 
     public function showForgotPin()
