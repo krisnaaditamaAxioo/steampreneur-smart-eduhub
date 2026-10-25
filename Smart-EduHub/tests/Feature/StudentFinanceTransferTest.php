@@ -7,6 +7,7 @@ use App\Models\Student;
 use App\Models\StudentCard;
 use App\Models\StudentCardTransaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class StudentFinanceTransferTest extends TestCase
@@ -219,6 +220,46 @@ class StudentFinanceTransferTest extends TestCase
         $this->actingAs($this->sender, 'student')
             ->get(route('siswa.finance.transactions.show', $tx))
             ->assertOk();
+    }
+
+    public function test_signed_shared_receipt_is_public_and_shows_full_transaction_details(): void
+    {
+        $tx = StudentCardTransaction::create([
+            'card_id'          => $this->sourceCard->id,
+            'type'             => 'topup',
+            'amount'           => 25000,
+            'balance_before'   => 1234,
+            'balance_after'    => 5678,
+            'reference_number' => 'PUBLIC-RECEIPT-001',
+            'description'      => 'Private transaction note',
+        ]);
+
+        $url = URL::signedRoute('siswa.finance.transactions.share', ['transaction' => $tx]);
+
+        $this->get($url)
+            ->assertOk()
+            ->assertSee('PUBLIC-RECEIPT-001')
+            ->assertSee('25.000')
+            ->assertSee('CARD-SRC-001')
+            ->assertSee('1.234')
+            ->assertSee('5.678')
+            ->assertSee('Private transaction note')
+            ->assertSee($this->sender->nama_lengkap);
+    }
+
+    public function test_shared_receipt_rejects_unsigned_requests(): void
+    {
+        $tx = StudentCardTransaction::create([
+            'card_id'          => $this->sourceCard->id,
+            'type'             => 'topup',
+            'amount'           => 25000,
+            'balance_before'   => 50000,
+            'balance_after'    => 75000,
+            'reference_number' => 'UNSIGNED-RECEIPT-001',
+        ]);
+
+        $this->get(route('siswa.finance.transactions.share', $tx))
+            ->assertForbidden();
     }
 
     // ---------------------------------------------------------------

@@ -342,13 +342,13 @@
     }
 
     async function shareReceipt() {
-        const url = @json($receiptUrl);
+        const url = @json($shareUrl);
 
         if (navigator.share) {
             try {
                 await navigator.share({
                     title: 'Detail Transaksi',
-                    text: 'Berikut adalah tautan bukti transaksi digital saya.',
+                    text: 'Berikut adalah tautan struk transaksi digital.',
                     url: url,
                 });
                 return;
@@ -361,7 +361,7 @@
 
         try {
             await copyText(url);
-            showToast('Tautan struk disalin ke papan klip.');
+            showToast('Tautan struk publik disalin ke papan klip.');
         } catch (error) {
             showToast('Gagal menyalin tautan secara otomatis.', true);
         }

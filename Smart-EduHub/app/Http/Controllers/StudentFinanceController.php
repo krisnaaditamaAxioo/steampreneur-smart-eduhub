@@ -9,6 +9,7 @@ use App\Models\TransactionActionHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 
 class StudentFinanceController extends Controller
 {
@@ -70,8 +71,9 @@ class StudentFinanceController extends Controller
     {
         $student = Auth::guard('student')->user();
         $transaction = $this->ensureTransactionOwnership($transaction, $student->id);
+        $shareUrl = URL::signedRoute('siswa.finance.transactions.share', ['transaction' => $transaction]);
 
-        return view('siswa.finance.transaction-detail', compact('student', 'transaction'));
+        return view('siswa.finance.transaction-detail', compact('student', 'transaction', 'shareUrl'));
     }
 
     public function receipt(StudentCardTransaction $transaction)
@@ -80,6 +82,17 @@ class StudentFinanceController extends Controller
         $transaction = $this->ensureTransactionOwnership($transaction, $student->id);
 
         return view('siswa.finance.receipt', compact('student', 'transaction'));
+    }
+
+    public function sharedReceipt(StudentCardTransaction $transaction)
+    {
+        $transaction->loadMissing(['card.student', 'relatedCard.student', 'performedBy']);
+
+        return view('siswa.finance.receipt', [
+            'student' => null,
+            'transaction' => $transaction,
+            'isPublicReceipt' => true,
+        ]);
     }
 
     public function showTransferForm()

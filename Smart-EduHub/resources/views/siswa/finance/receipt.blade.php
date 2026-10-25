@@ -41,6 +41,7 @@
 </head>
 <body class="bg-slate-50 text-slate-900 selection:bg-brand-500 selection:text-white">
     @php
+        $isPublicReceipt = $isPublicReceipt ?? false;
         $isCredit = in_array($transaction->type, ['topup', 'transfer_receive']);
         switch ($transaction->type) {
             case 'topup':            $txTitle = 'Top Up Saldo'; break;
@@ -58,10 +59,14 @@
             
             <!-- Navigation Action Bar -->
             <div class="flex items-center justify-between px-4 sm:px-0 print:hidden">
+                @unless($isPublicReceipt)
                 <a href="{{ route('siswa.finance.transactions.show', $transaction) }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 rounded-2xl text-xs font-bold uppercase tracking-wider text-slate-600 transition-all">
                     <span class="material-symbols-outlined text-sm">arrow_back</span>
                     <span>Kembali</span>
                 </a>
+                @else
+                <span></span>
+                @endunless
                 
                 <div class="flex items-center gap-2">
                     <button type="button" onclick="downloadAsImage()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-2xl text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-emerald-100 transition-all">

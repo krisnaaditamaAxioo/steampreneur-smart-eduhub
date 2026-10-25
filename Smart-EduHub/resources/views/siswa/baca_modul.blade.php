@@ -317,10 +317,10 @@
                     <p class="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest mt-0.5">Axioo Class Program Team</p>
                 </div>
             </div>
-            <button onclick="window.print()" class="w-full sm:w-auto px-4 py-2.5 bg-brand-50 hover:bg-[#EB4325] border border-orange-200/80 text-[#EB4325] hover:text-white rounded-xl text-[10px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm action-print-hide">
-                <span class="material-symbols-outlined text-base">print</span>
-                <span>Cetak Materi</span>
-            </button>
+            <a href="{{ route('siswa.module.pdf', $module->id) }}" class="w-full sm:w-auto px-4 py-2.5 bg-brand-50 hover:bg-[#EB4325] border border-orange-200/80 text-[#EB4325] hover:text-white rounded-xl text-[10px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm action-print-hide">
+                <span class="material-symbols-outlined text-base">picture_as_pdf</span>
+                <span>Unduh PDF Materi</span>
+            </a>
         </div>
     </div>
 

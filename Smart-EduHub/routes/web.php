@@ -304,6 +304,9 @@ Route::prefix('siswa')->name('siswa.')->group(function () {
     Route::post('/forgot-pin', [StudentPortalController::class, 'processForgotPin'])->name('forgot-pin.process');
     Route::get('/reset-pin', [StudentPortalController::class, 'showResetPin'])->name('reset-pin');
     Route::post('/reset-pin', [StudentPortalController::class, 'processResetPin'])->name('reset-pin.update');
+    Route::get('/share/transactions/{transaction}/receipt', [StudentFinanceController::class, 'sharedReceipt'])
+        ->middleware('signed')
+        ->name('finance.transactions.share');
     
     Route::middleware('auth:student')->group(function () {
         Route::get('/dashboard', [StudentPortalController::class, 'dashboard'])->name('dashboard');
@@ -315,6 +318,7 @@ Route::prefix('siswa')->name('siswa.')->group(function () {
         Route::get('/courses', [StudentPortalController::class, 'courses'])->name('courses');
         Route::get('/modules/{course_id?}', [StudentPortalController::class, 'modules'])->name('modules');
         Route::get('/module/read/{id}', [StudentPortalController::class, 'showModule'])->name('module.show');
+        Route::get('/module/{id}/pdf', [StudentPortalController::class, 'downloadModulePdf'])->name('module.pdf');
         Route::get('/module/soal/{id}', [StudentPortalController::class, 'showModuleSoal'])->name('module.soal');
         Route::post('/module/{id}/finish-read', [StudentPortalController::class, 'finishReadingModule'])->name('module.finish-read');
         Route::post('/module/{id}/progress', [StudentPortalController::class, 'updateModuleProgress'])->name('module.progress');

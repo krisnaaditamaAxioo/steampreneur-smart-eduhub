@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class StudentPortalController extends Controller
 {
@@ -444,6 +445,15 @@ class StudentPortalController extends Controller
         $submission = $student->assignmentSubmissions()->where('module_id', $module->id)->latest('submitted_at')->first();
 
         return view('siswa.baca_modul', compact('student', 'module', 'progress', 'submission', 'questions'));
+    }
+
+    public function downloadModulePdf($id)
+    {
+        $module = Module::with('course')->findOrFail($id);
+        $pdf = Pdf::loadView('siswa.pdf.module', compact('module'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download(Str::slug($module->title) . '.pdf');
     }
 
     public function showModuleSoal($id)
