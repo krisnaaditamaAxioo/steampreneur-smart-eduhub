@@ -43,35 +43,46 @@
         </div>
     </header>
 
-    {{-- ===== DAFTAR TRANSAKSI ===== --}}
+    {{-- ===== DAFT AR TRANSAKSI ===== --}}
     <div class="max-w-3xl mx-auto px-4 sm:px-6 mt-5 space-y-3">
         @forelse($transactions as $transaction)
         @php
             $isCredit = in_array($transaction->type, ['topup', 'transfer_receive']);
-            $txIcon = match ($transaction->type) {
-                'topup' => 'add_card',
-                'payment' => 'shopping_cart',
-                'transfer' => 'send',
-                'transfer_receive' => 'call_received',
-                'withdraw' => 'point_of_sale',
-                default => 'receipt',
-            };
-            $txColorClass = match ($transaction->type) {
-                'topup' => 'bg-emerald-50 text-emerald-600',
-                'payment' => 'bg-rose-50 text-rose-600',
-                'transfer' => 'bg-orange-50 text-orange-600',
-                'transfer_receive' => 'bg-cyan-50 text-cyan-600',
-                'withdraw' => 'bg-amber-50 text-amber-600',
-                default => 'bg-orange-50 text-orange-600',
-            };
-            $txLabel = match ($transaction->type) {
-                'topup' => 'Top Up Saldo',
-                'payment' => 'Pembelian / Belanja',
-                'transfer' => 'Transfer Keluar',
-                'transfer_receive' => 'Transfer Masuk',
-                'withdraw' => 'Tarik Tunai',
-                default => ucfirst($transaction->type),
-            };
+            $transactionTypes = [
+                'topup' => [
+                    'icon' => 'add_card',
+                    'color' => 'bg-emerald-50 text-emerald-600',
+                    'label' => 'Top Up Saldo',
+                ],
+                'payment' => [
+                    'icon' => 'shopping_cart',
+                    'color' => 'bg-rose-50 text-rose-600',
+                    'label' => 'Pembelian / Belanja',
+                ],
+                'transfer' => [
+                    'icon' => 'send',
+                    'color' => 'bg-orange-50 text-orange-600',
+                    'label' => 'Transfer Keluar',
+                ],
+                'transfer_receive' => [
+                    'icon' => 'call_received',
+                    'color' => 'bg-cyan-50 text-cyan-600',
+                    'label' => 'Transfer Masuk',
+                ],
+                'withdraw' => [
+                    'icon' => 'point_of_sale',
+                    'color' => 'bg-amber-50 text-amber-600',
+                    'label' => 'Tarik Tunai',
+                ],
+            ];
+            $typeDetails = $transactionTypes[$transaction->type] ?? [
+                'icon' => 'receipt',
+                'color' => 'bg-orange-50 text-orange-600',
+                'label' => ucfirst($transaction->type),
+            ];
+            $txIcon = $typeDetails['icon'];
+            $txColorClass = $typeDetails['color'];
+            $txLabel = $typeDetails['label'];
             $badgeClass = $isCredit
                 ? 'bg-emerald-50 text-emerald-700'
                 : ($transaction->type === 'withdraw' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700');
